@@ -1,4 +1,4 @@
-import Util.barcode as barcode
+import Util.Barcode as Barcode
 import unittest
 
 class KnownValues(unittest.TestCase):
@@ -19,25 +19,25 @@ class KnownValues(unittest.TestCase):
     def testKnownValues(self):
         for bc, expectedResult in self.knownValues:
             print bc
-            result = barcode.validate_barcode(bc)
+            result = Barcode.validateBarcode(bc)
             self.assertEqual(result, expectedResult)
 
 class BadValues(unittest.TestCase):
     def testTooShort(self):
         for i in range(0,11):
             bc = "0" * i
-            result = barcode.validate_barcode(bc)
+            result = Barcode.validateBarcode(bc)
             self.assertFalse(result)
         
     def testTooLong(self):
         for i in range(14,20):
             bc = "0" * i
-            result = barcode.validate_barcode(bc)
+            result = Barcode.validateBarcode(bc)
             self.assertFalse(result)
             
     def testNonNumeric(self):
-        for bc in ("0000000000X", "BarCode1234"):
-            result = barcode.validate_barcode(bc)
+        for bc in ("0000000000X", "Barcode123456"):
+            result = Barcode.validateBarcode(bc)
             self.assertFalse(result)        
             
 if __name__ == "__main__":

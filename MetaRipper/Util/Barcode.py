@@ -1,12 +1,12 @@
 import re
 
 # Regex for 12 or 13 digits
-valid_bc = re.compile("^[0-9]{12,13}$")
+_valid_bc = re.compile("^[0-9]{12,13}$")
 
-def validate_barcode(barcode):
+def validateBarcode(barcode):
     
     bc = str(barcode)
-    if not valid_bc.match(bc):
+    if not _valid_bc.match(bc):
         return False
         
     (a,b) = (0,0)
