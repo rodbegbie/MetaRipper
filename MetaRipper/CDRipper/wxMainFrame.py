@@ -6,14 +6,12 @@ import wx
 import wx.grid
 # end wxGlade
 
-from DiscMetadata import DiscMetadata, TrackMetadata
+from data.DiscMetadata import DiscMetadata, TrackMetadata
+from data.MusicBrainz import searchMb, createDiscMetadata
+from Util.RipTrack import ripTrack
 import logging
 import webbrowser        
-import musicbrainz
-q = musicbrainz
 
-import re
-discNumRegex = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
 
 class wxMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -143,6 +141,7 @@ class wxMainFrame(wx.Frame):
         wx.EVT_BUTTON(self, self.button_mbdisc.GetId(), self.onMBDisc)
         wx.EVT_BUTTON(self, self.button_eject.GetId(), self.onEject)
         wx.EVT_BUTTON(self, self.button_refresh.GetId(), self.onRefresh)
+        wx.EVT_BUTTON(self, self.button_rip.GetId(), self.onRip)
         wx.EVT_BUTTON(self, self.button_exit.GetId(), self.onExit)
         wx.EVT_TEXT_ENTER(self, self.text_ctrl_barcode.GetId(), self.checkBarcode)
         
@@ -151,6 +150,9 @@ class wxMainFrame(wx.Frame):
         url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
         webbrowser.open_new(url)
     
+    def onRip(self, event):
+        ripTrack(1, "/home/rod/1.flac")
+        
     def onEject(self, event):
         self._eject()
         
@@ -169,26 +171,13 @@ class wxMainFrame(wx.Frame):
                 self.choice_country.SetSelection(0)
 
     def onRefresh(self, event):
-        mb = musicbrainz.mb()
-        mb.SetDepth(2)
-
         discMeta = None
-        
-        mb.Query(q.MBQ_GetCDTOC)
-        cdid = mb.GetResultData(q.MBE_TOCGetCDIndexId)        
-        numTracks = mb.GetResultInt(q.MBE_TOCGetLastTrack)
-        toc = [1, numTracks]
-        for ii in range (1, numTracks + 1):
-            trackOffset = mb.GetResultInt1(q.MBE_TOCGetTrackSectorOffset, ii)
-            toc.append(trackOffset)
-        print "toc: ", toc
-        
-        logging.debug("querying musicbrainz.org to see if this cd is on there...")
-        mb.QueryWithArgs(q.MBQ_GetCDInfoFromCDIndexId, [cdid])
-        
-        if mb.GetResultInt(q.MBE_GetNumAlbums) == 1:
-            discMeta = self.createDiscMetadata(mb, 1, cdid, numTracks, toc)
-        elif mb.GetResultInt(q.MBE_GetNumAlbums) == 0:
+        (mb, toc, numFound, info) = searchMb()
+        if numFound == 1:
+            numTracks = info[0]
+            cdid = info[1]
+            discMeta = createDiscMetadata(mb, 1, cdid, numTracks, toc)
+        elif numFound == 0:    
             logging.info("CD Not Found")
             button = wx.MessageDialog(self,
                                       "Add CD to MusicBrainz?", "CD Not Found", 
@@ -196,10 +185,9 @@ class wxMainFrame(wx.Frame):
                                       wx.ICON_QUESTION).ShowModal()
 
             if button == wx.ID_YES:
-                url = mb.GetWebSubmitURL()
                 if url:
                     print "opening web browser to '%s'..." % url
-                    webbrowser.open_new(url)
+                    webbrowser.open_new(info)
             else:
                 self._eject()
         else:
@@ -208,60 +196,9 @@ class wxMainFrame(wx.Frame):
             
         if discMeta:
             self.updateDisplay(discMeta)
-
-    def createDiscMetadata(self, mb, disc, cdid, numTracks, toc):
-        discMeta = DiscMetadata()            
-        print "Yes and here's the info:"
-        mb.Select1(q.MBS_SelectAlbum, 1)            
-        album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
-        albid = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetAlbumId, disc))
-        artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
-        if artId != q.MBI_VARIOUS_ARTIST_ID:
-            artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
-            va = False
-        else:
-            artist = "Various Artists"
-            va = True
-
-        discNumMatches = discNumRegex.findall(album)
-        if discNumMatches:
-            title = discNumMatches[0]
-            discNum = int(discNumMatches[1])
-        else:
-            discNum = 1
-            
-        discMeta.title = album
-        discMeta.artist = artist
-        discMeta.mbDiscId = cdid
-        discMeta.toc = toc
-        discMeta.mbAlbumId = albid
-        discMeta.discNumber = (discNum, discNum)
-        
-        print "\t%s / %s" % (artist, album)
-        for ii in range(1, mb.GetResultInt(q.MBE_AlbumGetNumTracks) + 1):
-            name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
-            if va:
-                artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
-            dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
-            trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
-            trackId = mb.GetIDFromURL(trackURI)
-            track = mb.GetOrdinalFromList(q.MBE_AlbumGetTrackList, trackURI)
-            trackMeta = TrackMetadata()
-            trackMeta.title = name
-            trackMeta.artist = artist
-            trackMeta.number = track
-            trackMeta.length = int(dura)
-            trackMeta.mbTrackId = trackId
-            discMeta.tracks.append(trackMeta)
-            dura = "%d:%02d" % divmod(int(dura / 1000), 60)
-            
-            print "\t%02d - %s - %s (%s)" % (track, artist, name, dura)
-                            
-        return discMeta
     
     def updateDisplay(self, discMeta):
         self.discMeta = discMeta
-        mb = musicbrainz.mb()
         self._setInfoLabel(self.label_cdTitle, discMeta.title)
         self._setInfoLabel(self.label_cdArtist, discMeta.artist)
         self._setInfoLabel(self.button_mbdisc, discMeta.mbAlbumId)

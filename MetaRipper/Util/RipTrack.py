@@ -1,0 +1,48 @@
+import gst
+import logging
+import thread
+from time import sleep
+
+def _nano2str(nanos):
+    ts = nanos / gst.SECOND
+    return '%02d:%02d:%02d.%06d' % (ts / 3600,
+                                    ts / 60,
+                                    ts % 60,
+                                    nanos % gst.SECOND)
+
+def _tickThread(pipeline, pad):
+    while pipeline.get_state() == gst.STATE_PLAYING:
+        print _nano2str(pad.query(gst.QUERY_POSITION, gst.FORMAT_TIME))
+        sleep(0.2)
+
+def ripTrack(trackNo, filename, device="/dev/cdroms/cdrom0"):
+    cdp = gst.element_factory_make("cdparanoia", "ripper")
+    cdp.set_property("device", device)
+    cdp.set_property("paranoia-mode", 255)
+    track_format = gst.format_get_by_nick("track")
+    src_pad = cdp.get_pad("src")
+
+    flac = gst.element_factory_make("flacenc", "encoder")
+       
+    sink = gst.element_factory_make("filesink", "sink")
+    sink.set_property("location", filename)
+
+    bin = gst.Pipeline()
+    bin.add_many(cdp, flac, sink)
+    gst.element_link_many(cdp, flac, sink)
+    
+    bin.set_state(gst.STATE_PAUSED)
+    
+    seek = gst.event_new_segment_seek(track_format | gst.SEEK_METHOD_SET | gst.SEEK_FLAG_FLUSH,
+                                      trackNo - 1, trackNo)
+    src_pad.send_event(seek)
+    
+    res = bin.set_state(gst.STATE_PLAYING);
+    assert res
+    
+    thread.start_new_thread(_tickThread,(bin, src_pad))
+    while bin.iterate():
+        pass
+    
+    res = bin.set_state(gst.STATE_NULL)
+    assert res
