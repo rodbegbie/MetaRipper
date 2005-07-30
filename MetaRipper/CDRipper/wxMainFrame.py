@@ -6,11 +6,11 @@ import wx
 import wx.grid
 # end wxGlade
 
-from data.DiscMetadata import DiscMetadata, TrackMetadata
+from data.DiscMetadata import DiscMetadata, TrackMetadata, makeTrackFilename
 from data.MusicBrainz import searchMb, createDiscMetadata
 from Util.RipTrack import ripTrack
-import logging
-import webbrowser        
+import logging, thread, webbrowser
+from time import sleep
 
 
 class wxMainFrame(wx.Frame):
@@ -20,6 +20,7 @@ class wxMainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.panel_1 = wx.Panel(self, -1)
         self.panel_buttons = wx.Panel(self.panel_1, -1)
+        self.panel_progress = wx.Panel(self.panel_1, -1)
         self.panel_tracks = wx.Panel(self.panel_1, -1)
         self.panel_info = wx.Panel(self.panel_1, -1)
         self.sizer_3_staticbox = wx.StaticBox(self.panel_tracks, -1, "Tracks")
@@ -41,6 +42,10 @@ class wxMainFrame(wx.Frame):
         self.label_11 = wx.StaticText(self.panel_info, -1, "Country:")
         self.choice_country = wx.Choice(self.panel_info, -1, choices=["UK", "US", "Other"])
         self.grid_tracks = wx.grid.Grid(self.panel_tracks, -1, size=(1, 1))
+        self.label_2 = wx.StaticText(self.panel_progress, -1, "Track Progress:")
+        self.gauge_track = wx.Gauge(self.panel_progress, -1, 100, style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
+        self.label_4 = wx.StaticText(self.panel_progress, -1, "Disc Progress:")
+        self.gauge_disc = wx.Gauge(self.panel_progress, -1, 100, style=wx.GA_HORIZONTAL|wx.GA_SMOOTH)
         self.button_refresh = wx.Button(self.panel_buttons, -1, "&Refresh")
         self.button_rip = wx.Button(self.panel_buttons, -1, "&Rip")
         self.button_eject = wx.Button(self.panel_buttons, -1, "&Eject")
@@ -82,6 +87,7 @@ class wxMainFrame(wx.Frame):
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         grid_sizer_1 = wx.FlexGridSizer(3, 1, 0, 0)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+        grid_sizer_2 = wx.FlexGridSizer(2, 2, 0, 0)
         sizer_3 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.HORIZONTAL)
         grid_sizer_3 = wx.FlexGridSizer(7, 2, 0, 0)
         grid_sizer_4 = wx.FlexGridSizer(1, 3, 0, 5)
@@ -116,6 +122,16 @@ class wxMainFrame(wx.Frame):
         self.panel_tracks.SetAutoLayout(True)
         self.panel_tracks.SetSizer(sizer_3)
         grid_sizer_1.Add(self.panel_tracks, 1, wx.EXPAND, 0)
+        grid_sizer_2.Add(self.label_2, 0, wx.FIXED_MINSIZE, 0)
+        grid_sizer_2.Add(self.gauge_track, 0, wx.EXPAND|wx.FIXED_MINSIZE, 0)
+        grid_sizer_2.Add(self.label_4, 0, wx.FIXED_MINSIZE, 0)
+        grid_sizer_2.Add(self.gauge_disc, 0, wx.EXPAND|wx.FIXED_MINSIZE, 0)
+        self.panel_progress.SetAutoLayout(True)
+        self.panel_progress.SetSizer(grid_sizer_2)
+        grid_sizer_2.Fit(self.panel_progress)
+        grid_sizer_2.SetSizeHints(self.panel_progress)
+        grid_sizer_2.AddGrowableCol(1)
+        grid_sizer_1.Add(self.panel_progress, 1, wx.EXPAND, 0)
         sizer_2.Add(self.button_refresh, 0, wx.ALL|wx.FIXED_MINSIZE, 5)
         sizer_2.Add(self.button_rip, 0, wx.ALL|wx.FIXED_MINSIZE, 5)
         sizer_2.Add(self.button_eject, 0, wx.ALL|wx.FIXED_MINSIZE, 5)
@@ -144,14 +160,34 @@ class wxMainFrame(wx.Frame):
         wx.EVT_BUTTON(self, self.button_rip.GetId(), self.onRip)
         wx.EVT_BUTTON(self, self.button_exit.GetId(), self.onExit)
         wx.EVT_TEXT_ENTER(self, self.text_ctrl_barcode.GetId(), self.checkBarcode)
+ 
+    def _ripProgress(self, trackNo, secs):
+        trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
+        trackPercent = int((secs / trackLength) * 100)
         
+        numTracks = float(len(self.discMeta.tracks))
+        discPercent = ((trackNo-1) / numTracks) * 100
+        discPercent = int(discPercent + (trackPercent/numTracks))
+        
+        wx.CallAfter(self.gauge_track.SetValue, trackPercent)
+        wx.CallAfter(self.gauge_disc.SetValue, discPercent)
+
+    def _ripComplete(self, trackNo):
+        self._ripping = False
         
     def onMBDisc(self, event):
         url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
         webbrowser.open_new(url)
     
     def onRip(self, event):
-        ripTrack(1, "/home/rod/1.flac")
+        thread.start_new_thread(self._ripThread,())
+        
+    def _ripThread(self):
+        for trackNum in range(1, len(self.discMeta.tracks) + 1):
+            filename = makeTrackFilename(self.discMeta, trackNum)
+            logging.info("Ripping to %s" % filename)
+            ripTrack(trackNum, filename, self._ripProgress, self._ripComplete)
+        self._eject()
         
     def onEject(self, event):
         self._eject()
@@ -172,6 +208,7 @@ class wxMainFrame(wx.Frame):
 
     def onRefresh(self, event):
         discMeta = None
+        self._ripping = False
         (mb, toc, numFound, info) = searchMb()
         if numFound == 1:
             numTracks = info[0]

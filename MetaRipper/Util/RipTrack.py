@@ -5,17 +5,12 @@ from time import sleep
 
 def _nano2str(nanos):
     ts = nanos / gst.SECOND
-    return '%02d:%02d:%02d.%06d' % (ts / 3600,
+    return '%02d:%02d:%02d.%02d' % (ts / 3600,
                                     ts / 60,
                                     ts % 60,
                                     nanos % gst.SECOND)
 
-def _tickThread(pipeline, pad):
-    while pipeline.get_state() == gst.STATE_PLAYING:
-        print _nano2str(pad.query(gst.QUERY_POSITION, gst.FORMAT_TIME))
-        sleep(0.2)
-
-def ripTrack(trackNo, filename, device="/dev/cdroms/cdrom0"):
+def ripTrack(trackNo, filename, callbackProgress, callbackComplete, device="/dev/cdroms/cdrom0"):
     cdp = gst.element_factory_make("cdparanoia", "ripper")
     cdp.set_property("device", device)
     cdp.set_property("paranoia-mode", 255)
@@ -38,11 +33,15 @@ def ripTrack(trackNo, filename, device="/dev/cdroms/cdrom0"):
     src_pad.send_event(seek)
     
     res = bin.set_state(gst.STATE_PLAYING);
-    assert res
     
-    thread.start_new_thread(_tickThread,(bin, src_pad))
+    lastsecs = -1
     while bin.iterate():
-        pass
-    
+        nanos = src_pad.query(gst.QUERY_POSITION, gst.FORMAT_TIME)
+        secs = nanos / gst.SECOND
+        if secs <> lastsecs and secs > 0:
+            callbackProgress(trackNo, secs)
+            lastsecs = secs
+
     res = bin.set_state(gst.STATE_NULL)
-    assert res
+    callbackComplete(trackNo)
+    
