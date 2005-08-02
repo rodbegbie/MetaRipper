@@ -31,7 +31,7 @@ def _makeSafe(string):
     retval = ""
     for char in string[:]:
         charint = ord(char)
-        if charint in range(65,91) or charint in range(97,123):
+        if charint in range(65,91) or charint in range(97,123) or charint in range(48,58):
             retval = retval + char
         else:
             retval = retval + "_"
