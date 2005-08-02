@@ -6,9 +6,10 @@ q = musicbrainz
 import re
 discNumRegex = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
 
-def searchMb():
+def searchMb(device):
     mb = musicbrainz.mb()
     mb.SetDepth(2)
+    mb.SetDevice(device)
 
     mb.Query(q.MBQ_GetCDTOC)
     cdid = mb.GetResultData(q.MBE_TOCGetCDIndexId)        
@@ -32,7 +33,7 @@ def searchMb():
 
 def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta = DiscMetadata()            
-    print "Yes and here's the info:"
+    logging.info("Yes and here's the info:")
     mb.Select1(q.MBS_SelectAlbum, 1)            
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
     albid = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetAlbumId, disc))
@@ -58,7 +59,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.mbAlbumId = albid
     discMeta.discNumber = (discNum, discNum)
     
-    print "\t%s / %s" % (artist, album)
+    logging.info("\t%s / %s" % (artist, album))
     for ii in range(1, mb.GetResultInt(q.MBE_AlbumGetNumTracks) + 1):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
@@ -76,6 +77,6 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         discMeta.tracks.append(trackMeta)
         dura = "%d:%02d" % divmod(int(dura / 1000), 60)
         
-        print "\t%02d - %s - %s (%s)" % (track, artist, name, dura)
+        logging.info("\t%02d - %s - %s (%s)" % (track, artist, name, dura))
                         
     return discMeta

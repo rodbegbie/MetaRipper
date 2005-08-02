@@ -10,7 +10,7 @@ def _nano2str(nanos):
                                     ts % 60,
                                     nanos % gst.SECOND)
 
-def ripTrack(trackNo, filename, callbackProgress, callbackComplete, device="/dev/cdroms/cdrom0"):
+def ripTrack(device, trackNo, filename, callbackProgress, callbackComplete):
     cdp = gst.element_factory_make("cdparanoia", "ripper")
     cdp.set_property("device", device)
     cdp.set_property("paranoia-mode", 255)
