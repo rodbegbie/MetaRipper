@@ -1,5 +1,7 @@
 import os        
 
+SAFE_CHARS = range(65,91) + range(97,123) + range(48,58)
+
 class DiscMetadata:
     def __init__ (self):
         self.title = ""
@@ -33,7 +35,7 @@ def _makeSafe(string):
     retval = ""
     for char in string[:]:
         charint = ord(char)
-        if charint in range(65,91) or charint in range(97,123) or charint in range(48,58):
+        if charint in SAFE_CHARS:
             retval = retval + char
         else:
             retval = retval + "_"
@@ -50,5 +52,10 @@ def makeTrackFilename(discmeta, trackNum):
         filename = "%02d - %s - %s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
     else:
         filename = "%02d - %s.flac" % (trackNum, _makeSafe(track.title))
+
+    # Tack on the disc number if necessary
+    if discmeta.discNumber[1] <> 1:
+        filename = "%d-%s" % (discmeta.discNumber[0], filename)
+
     return os.path.join(path, filename)
         

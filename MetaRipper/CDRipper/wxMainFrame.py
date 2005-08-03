@@ -259,7 +259,7 @@ class wxMainFrame(wx.Frame):
 
     def _eject(self):
         import os
-        os.system("eject")
+        os.system("eject %s" % CD_DEVICE)
 
     def _setInfoLabel(self, label, text):
         text = text.replace("&", "&&")  # Display ampersands in labels

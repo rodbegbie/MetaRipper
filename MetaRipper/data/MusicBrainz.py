@@ -3,6 +3,7 @@ import logging
 import musicbrainz
 q = musicbrainz
 from tunepimp import tunepimp
+tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
 
 import re
 DISC_NUM_REGEX = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
@@ -48,8 +49,8 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
 
     discNumMatches = DISC_NUM_REGEX.findall(album)
     if discNumMatches:
-        title = discNumMatches[0]
-        discNum = int(discNumMatches[1])
+        album = discNumMatches[0][0]
+        discNum = int(discNumMatches[0][1])
     else:
         discNum = 1
         
@@ -66,7 +67,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
             artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
-            artId = mb.GetResultData1(q.MBE_AlbumGetArtistId, ii)
+            artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
         dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
         trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
         trackId = mb.GetIDFromURL(trackURI)
@@ -86,7 +87,6 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     return discMeta
 
 def writeTags(filename, discMeta, trackNum):
-    tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
     fileId = tp.addFile(filename)
     
     tp.setMoveFiles(False)
@@ -96,7 +96,7 @@ def writeTags(filename, discMeta, trackNum):
     mdata = tr.getServerMetadata()
     mdata.album = discMeta.title
     mdata.albumId = discMeta.mbAlbumId
-    mdata.variousArtist = discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID
+    mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
 
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist
@@ -108,6 +108,5 @@ def writeTags(filename, discMeta, trackNum):
     tr.setServerMetadata(mdata)
     tr.unlock()                   
     tp.releaseTrack(tr);
-    print "writing"
     tp.writeTags([fileId],)
-    print "wrote"    
+    
