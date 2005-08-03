@@ -7,6 +7,7 @@ class DiscMetadata:
         self.toc = []
         self.mbAlbumId = ""
         self.mbDiscId = ""
+        self.mbArtistId = ""
         self.discNumber = (1,1)
         self.releaseDate = None
         self.barcodeType = ""
@@ -24,6 +25,7 @@ class TrackMetadata:
         self.title = ""
         self.artist = ""
         self.length = 0
+        self.mbArtistId = ""
         self.mbTrackId = ""
         self.mbTrm = ""
 

@@ -2,9 +2,10 @@ from DiscMetadata import DiscMetadata, TrackMetadata
 import logging
 import musicbrainz
 q = musicbrainz
+from tunepimp import tunepimp
 
 import re
-discNumRegex = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
+DISC_NUM_REGEX = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
 
 def searchMb(device):
     mb = musicbrainz.mb()
@@ -27,7 +28,7 @@ def searchMb(device):
     if numFound == 1:
         return (mb, toc, numFound, (cdid, numTracks))
     elif numFound == 0:
-        return (mb, toc, numFound, mb.GetWebSubmitURL())
+        return (mb, toc, numFound, (mb.GetWebSubmitURL(),))
     #TODO: If more than one found, return list.
     
 
@@ -45,7 +46,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         artist = "Various Artists"
         va = True
 
-    discNumMatches = discNumRegex.findall(album)
+    discNumMatches = DISC_NUM_REGEX.findall(album)
     if discNumMatches:
         title = discNumMatches[0]
         discNum = int(discNumMatches[1])
@@ -57,6 +58,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.mbDiscId = cdid
     discMeta.toc = toc
     discMeta.mbAlbumId = albid
+    discMeta.mbArtistId = artId
     discMeta.discNumber = (discNum, discNum)
     
     logging.info("\t%s / %s" % (artist, album))
@@ -64,6 +66,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
             artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
+            artId = mb.GetResultData1(q.MBE_AlbumGetArtistId, ii)
         dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
         trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
         trackId = mb.GetIDFromURL(trackURI)
@@ -74,9 +77,37 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         trackMeta.number = track
         trackMeta.length = int(dura)
         trackMeta.mbTrackId = trackId
+        trackMeta.mbArtistId = artId
         discMeta.tracks.append(trackMeta)
         dura = "%d:%02d" % divmod(int(dura / 1000), 60)
         
         logging.info("\t%02d - %s - %s (%s)" % (track, artist, name, dura))
                         
     return discMeta
+
+def writeTags(filename, discMeta, trackNum):
+    tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
+    fileId = tp.addFile(filename)
+    
+    tp.setMoveFiles(False)
+    tp.setRenameFiles(False)
+    tr = tp.getTrack(fileId);
+    tr.lock()
+    mdata = tr.getServerMetadata()
+    mdata.album = discMeta.title
+    mdata.albumId = discMeta.mbAlbumId
+    mdata.variousArtist = discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID
+
+    trackMeta = discMeta.tracks[trackNum-1]
+    mdata.artist = trackMeta.artist
+    mdata.artistId = trackMeta.mbArtistId
+    mdata.track = trackMeta.title
+    mdata.trackId = trackMeta.mbTrackId
+    mdata.trackNum = trackMeta.number
+    tr.setStatus(tunepimp.eRecognized)
+    tr.setServerMetadata(mdata)
+    tr.unlock()                   
+    tp.releaseTrack(tr);
+    print "writing"
+    tp.writeTags([fileId],)
+    print "wrote"    
