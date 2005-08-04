@@ -16,10 +16,15 @@ def searchMb(device):
     mb.Query(q.MBQ_GetCDTOC)
     cdid = mb.GetResultData(q.MBE_TOCGetCDIndexId)        
     numTracks = mb.GetResultInt(q.MBE_TOCGetLastTrack)
-    toc = [1, numTracks]
-    for ii in range (1, numTracks + 1):
+    toc = {}
+    toc["first_track"] = 1
+    toc["num_tracks"] = numTracks
+    toc["length"] = mb.GetResultInt1(q.MBE_TOCGetTrackSectorOffset, 1)
+    offsets = []
+    for ii in range (2, numTracks + 2):
         trackOffset = mb.GetResultInt1(q.MBE_TOCGetTrackSectorOffset, ii)
-        toc.append(trackOffset)
+        offsets.append(trackOffset)
+    toc["offsets"] = offsets
     logging.debug("toc: %s" % str(toc))
     
     logging.info("querying musicbrainz.org to see if this cd is on there...")

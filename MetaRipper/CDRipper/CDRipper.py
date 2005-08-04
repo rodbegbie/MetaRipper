@@ -9,10 +9,11 @@ from wxMainFrame import wxMainFrame
 class CDRipper(wx.App):
     def OnInit(self):
         wx.InitAllImageHandlers()
-        frame_main = wxMainFrame(None, -1, "")
-        self.SetTopWindow(frame_main)
+        device = "/dev/cdrom"
         if len(sys.argv) > 1:
-            frame_main.setDevice(sys.argv[1])
+            device = sys.argv[1]
+        frame_main = wxMainFrame(None, -1, "", device=device)
+        self.SetTopWindow(frame_main)
         frame_main.Show()
         return 1
 

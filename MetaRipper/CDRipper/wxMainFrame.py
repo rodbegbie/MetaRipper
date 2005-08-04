@@ -15,7 +15,7 @@ from time import sleep
 
 class wxMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        self._device="/dev/cdroms/cdrom0"
+        self._device=kwds.pop("device")        
         # begin wxGlade: wxMainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
@@ -174,7 +174,8 @@ class wxMainFrame(wx.Frame):
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
-        self._ripping = False
+        #TODO:  Update table (color?) to show track progress
+        pass
         
     def onMBDisc(self, event):
         url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
@@ -194,7 +195,7 @@ class wxMainFrame(wx.Frame):
         f = open(makeMetadataFilename(self.discMeta), "w")
         f.write(xml)
         f.close()
-        
+        #TODO: Alert user somehow
         self._eject()
         
     def onEject(self, event):
@@ -219,8 +220,8 @@ class wxMainFrame(wx.Frame):
         self._ripping = False
         (mb, toc, numFound, info) = searchMb(self._device)
         if numFound == 1:
-            numTracks = info[0]
-            cdid = info[1]
+            cdid = info[0]
+            numTracks = info[1]
             discMeta = createDiscMetadata(mb, 1, cdid, numTracks, toc)
         elif numFound == 0:    
             logging.info("CD Not Found")
@@ -260,9 +261,6 @@ class wxMainFrame(wx.Frame):
             i += 1
             
         self.text_ctrl_barcode.SetFocus()
-
-    def setDevice(self, device):
-        self._device = device
 
     def _eject(self):
         import os
