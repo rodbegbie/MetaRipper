@@ -1,8 +1,9 @@
 import os        
+from gnosis.xml.pickle import XML_Pickler
 
 SAFE_CHARS = range(65,91) + range(97,123) + range(48,58)
 
-class DiscMetadata:
+class DiscMetadata(XML_Pickler):
     def __init__ (self):
         self.title = ""
         self.artist = ""
@@ -21,7 +22,7 @@ class DiscMetadata:
         self.lastUpdateDate = None
         self.tracks = []
 
-class TrackMetadata:
+class TrackMetadata(XML_Pickler):
     def __init__ (self):
         self.number = 0
         self.title = ""
@@ -41,13 +42,17 @@ def _makeSafe(string):
             retval = retval + "_"
     return retval
 
-def makeTrackFilename(discmeta, trackNum):
-    track = discmeta.tracks[trackNum-1]
+def _makePath(discmeta):
     fileroot = "/home/rod/flac" #HACK: Shouldn't be hardcoded
     path = os.path.join(fileroot, _makeSafe(discmeta.artist), _makeSafe(discmeta.title))
     if not os.path.exists(path):
         os.makedirs(path)
+    return path
+    
 
+def makeTrackFilename(discmeta, trackNum):
+    path = _makePath(discmeta)
+    track = discmeta.tracks[trackNum-1]
     if discmeta.artist == "Various Artists":
         filename = "%02d - %s - %s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
     else:
@@ -58,4 +63,14 @@ def makeTrackFilename(discmeta, trackNum):
         filename = "%d-%s" % (discmeta.discNumber[0], filename)
 
     return os.path.join(path, filename)
-        
+
+def makeMetadataFilename(discmeta):
+    path = _makePath(discmeta)
+    filename = "discmetadata.xml"
+
+    # Tack on the disc number if necessary
+    if discmeta.discNumber[1] <> 1:
+        filename = "%d-%s" % (discmeta.discNumber[0], filename)
+
+    return os.path.join(path, filename)
+    

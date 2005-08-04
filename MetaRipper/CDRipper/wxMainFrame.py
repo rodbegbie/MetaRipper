@@ -6,8 +6,8 @@ import wx
 import wx.grid
 # end wxGlade
 
-from data.DiscMetadata import DiscMetadata, TrackMetadata, makeTrackFilename
-from data.MusicBrainz import searchMb, createDiscMetadata, writeTags
+from data.DiscMetadata import *
+from data.MusicBrainz import *
 from Util.RipTrack import ripTrack
 import logging, thread, webbrowser
 from time import sleep
@@ -189,6 +189,12 @@ class wxMainFrame(wx.Frame):
             logging.info("Ripping to %s" % filename)
             ripTrack(self._device, trackNum, filename, self._ripProgress, self._ripComplete)
             writeTags(filename, self.discMeta, trackNum)
+        # Dump XML
+        xml = self.discMeta.dumps()
+        f = open(makeMetadataFilename(self.discMeta), "w")
+        f.write(xml)
+        f.close()
+        
         self._eject()
         
     def onEject(self, event):
