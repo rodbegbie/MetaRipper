@@ -166,6 +166,7 @@ class wxMainFrame(wx.Frame):
         trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
         trackPercent = int((secs / trackLength) * 100)
         
+        #TODO: Fix this calculation to make it accurate
         numTracks = float(len(self.discMeta.tracks))
         discPercent = ((trackNo-1) / numTracks) * 100
         discPercent = int(discPercent + (trackPercent/numTracks))
@@ -174,7 +175,7 @@ class wxMainFrame(wx.Frame):
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
-        #TODO:  Update table (color?) to show track progress
+        wx.CallAfter(self.grid_tracks.ClearSelection, None)
         pass
         
     def onMBDisc(self, event):
@@ -182,10 +183,16 @@ class wxMainFrame(wx.Frame):
         webbrowser.open_new(url)
     
     def onRip(self, event):
+        self.discMeta.barcode = self.text_ctrl_barcode.GetValue()
+        self.discMeta.discNumber = (int(self.text_ctrl_discNum.GetValue()),
+                                    int(self.text_ctrl_discOf.GetValue()))
+        self.discMeta.country = self.choice_country.GetStringSelection()
+        #TODO:  Disable buttons
         thread.start_new_thread(self._ripThread,())
         
     def _ripThread(self):
         for trackNum in range(1, len(self.discMeta.tracks) + 1):
+            wx.CallAfter(self.grid_tracks.SelectRow, trackNum-1)
             filename = makeTrackFilename(self.discMeta, trackNum)
             logging.info("Ripping to %s" % filename)
             ripTrack(self._device, trackNum, filename, self._ripProgress, self._ripComplete)
@@ -210,7 +217,7 @@ class wxMainFrame(wx.Frame):
         if not Barcode.validateBarcode(bc):
             wx.MessageDialog(self, "That barcode is wrong!", "Barcode Error", wx.OK | wx.ICON_HAND).ShowModal()
         else:
-            if bc.find("0") == 0 or len(bc) == 12:
+            if bc[0] == "0" or len(bc) == 12:
                 self.choice_country.SetSelection(1)
             else:
                 self.choice_country.SetSelection(0)
