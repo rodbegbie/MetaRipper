@@ -10,7 +10,7 @@ from data.DiscMetadata import *
 from data.MusicBrainz import *
 from Util.RipTrack import ripTrack
 import logging, thread, webbrowser
-from time import sleep
+from time import sleep, localtime
 
 
 class wxMainFrame(wx.Frame):
@@ -164,18 +164,21 @@ class wxMainFrame(wx.Frame):
  
     def _ripProgress(self, trackNo, secs):
         trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
-        trackPercent = int((secs / trackLength) * 100)
+        trackPercent = 0
         
         #TODO: Fix this calculation to make it accurate
         numTracks = float(len(self.discMeta.tracks))
         discPercent = ((trackNo-1) / numTracks) * 100
-        discPercent = int(discPercent + (trackPercent/numTracks))
-        
+
+        if trackLength > 0:
+            trackPercent = int((secs / trackLength) * 100)
+            discPercent = int(discPercent + (trackPercent/numTracks))
+            
         wx.CallAfter(self.gauge_track.SetValue, trackPercent)
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
-        wx.CallAfter(self.grid_tracks.ClearSelection, None)
+        wx.CallAfter(self.grid_tracks.ClearSelection, [])
         pass
         
     def onMBDisc(self, event):
@@ -187,6 +190,7 @@ class wxMainFrame(wx.Frame):
         self.discMeta.discNumber = (int(self.text_ctrl_discNum.GetValue()),
                                     int(self.text_ctrl_discOf.GetValue()))
         self.discMeta.country = self.choice_country.GetStringSelection()
+        self.discMeta.ripTime = localtime
         #TODO:  Disable buttons
         thread.start_new_thread(self._ripThread,())
         
@@ -249,7 +253,7 @@ class wxMainFrame(wx.Frame):
             pass
             
         if discMeta:
-            self.updateDisplay(discMeta)
+            wx.CallAfter(self.updateDisplay, discMeta)
     
     def updateDisplay(self, discMeta):
         self.discMeta = discMeta
@@ -267,6 +271,7 @@ class wxMainFrame(wx.Frame):
             self.grid_tracks.SetCellValue(i, 2, "%d:%02d" % divmod(trackMeta.length / 1000, 60))
             i += 1
             
+        self.text_ctrl_barcode.SetValue("")
         self.text_ctrl_barcode.SetFocus()
 
     def _eject(self):
