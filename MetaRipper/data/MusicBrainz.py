@@ -31,22 +31,30 @@ def searchMb(device):
     mb.QueryWithArgs(q.MBQ_GetCDInfoFromCDIndexId, [cdid])
     
     numFound = mb.GetResultInt(q.MBE_GetNumAlbums)
-    if numFound == 1:
-        return (mb, toc, numFound, (cdid, numTracks))
-    elif numFound == 0:
+
+    if numFound == 0:
         return (mb, toc, numFound, (mb.GetWebSubmitURL(),))
-    #TODO: If more than one found, return list.
+    else:
+        return (mb, toc, numFound, (cdid, numTracks))
     
+def getDiscNames(mb, numDiscs):
+    names = []
+    for i in range (1, numDiscs + 1):
+        mb.Select1(q.MBS_SelectAlbum, i)
+        albumName = mb.GetResultData(q.MBE_AlbumGetAlbumName)
+        names.append(albumName)
+        mb.Select(q.MBS_Back);
+    return names
 
 def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta = DiscMetadata()            
     logging.info("Yes and here's the info:")
-    mb.Select1(q.MBS_SelectAlbum, 1)            
+    mb.Select1(q.MBS_SelectAlbum, disc)            
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
-    albid = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetAlbumId, disc))
+    albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1 + ((disc-1) * numTracks))
         va = False
     else:
         artist = "Various Artists"
@@ -67,7 +75,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.discNumber = (discNum, discNum)
     
     logging.info("\t%s / %s" % (artist, album))
-    for ii in range(1, mb.GetResultInt(q.MBE_AlbumGetNumTracks) + 1):
+    for ii in range(1 + ((disc-1) * numTracks), mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
             artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)

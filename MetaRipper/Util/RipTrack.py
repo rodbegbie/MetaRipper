@@ -37,10 +37,11 @@ def ripTrack(device, trackNo, filename, callbackProgress, callbackComplete):
     lastsecs = -1
     while bin.iterate():
         nanos = src_pad.query(gst.QUERY_POSITION, gst.FORMAT_TIME)
-        length = src_pad.query(gst.QUERY_SEGMENT_END, gst.FORMAT_TIME)
+        length = src_pad.query(gst.QUERY_TOTAL, gst.FORMAT_TIME)
         secs = nanos / gst.SECOND
         lensecs = length / gst.SECOND
         if secs <> lastsecs and secs > 0:
+            #print "secs %d, lensecs %d, rate %f" % (secs,lensecs, rate)
             callbackProgress(trackNo, secs, lensecs)
             lastsecs = secs
 

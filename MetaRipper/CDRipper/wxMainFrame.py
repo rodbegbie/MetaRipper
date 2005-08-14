@@ -234,7 +234,15 @@ class wxMainFrame(wx.Frame):
             cdid = info[0]
             numTracks = info[1]
             discMeta = createDiscMetadata(mb, 1, cdid, numTracks, toc)
-        elif numFound == 0:    
+        elif numFound > 1:
+            list = getDiscNames(mb, numFound)
+            pickDialog = wx.SingleChoiceDialog(self, "Pick one", "Multiple discs found", list)
+            pickDialog.ShowModal()
+            chosen = pickDialog.GetSelection()
+            cdid = info[0]
+            numTracks = info[1]
+            discMeta = createDiscMetadata(mb, chosen+1, cdid, numTracks, toc)
+        else:    
             logging.info("CD Not Found")
             button = wx.MessageDialog(self,
                                       "Add CD to MusicBrainz?", "CD Not Found", 
@@ -248,9 +256,6 @@ class wxMainFrame(wx.Frame):
                     webbrowser.open_new(url)
             else:
                 self._eject()
-        else:
-            # Display Choice
-            pass
             
         if discMeta:
             wx.CallAfter(self.updateDisplay, discMeta)
