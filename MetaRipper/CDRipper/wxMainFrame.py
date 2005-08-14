@@ -190,7 +190,7 @@ class wxMainFrame(wx.Frame):
         self.discMeta.discNumber = (int(self.text_ctrl_discNum.GetValue()),
                                     int(self.text_ctrl_discOf.GetValue()))
         self.discMeta.country = self.choice_country.GetStringSelection()
-        self.discMeta.ripTime = localtime
+        self.discMeta.ripTime = localtime()
         #TODO:  Disable buttons
         thread.start_new_thread(self._ripThread,())
         
