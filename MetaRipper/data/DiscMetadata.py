@@ -59,8 +59,8 @@ def makeTrackFilename(discmeta, trackNum):
         filename = "%02d - %s.flac" % (trackNum, _makeSafe(track.title))
 
     # Tack on the disc number if necessary
-    if discmeta.discNumber[1] <> 1:
-        filename = "%d-%s" % (discmeta.discNumber[0], filename)
+#    if discmeta.discNumber[1] <> 1:
+#        filename = "%d-%s" % (discmeta.discNumber[0], filename)
 
     return os.path.join(path, filename)
 
@@ -69,8 +69,8 @@ def makeMetadataFilename(discmeta):
     filename = "discmetadata.xml"
 
     # Tack on the disc number if necessary
-    if discmeta.discNumber[1] <> 1:
-        filename = "%d-%s" % (discmeta.discNumber[0], filename)
+#    if discmeta.discNumber[1] <> 1:
+#        filename = "%d-%s" % (discmeta.discNumber[0], filename)
 
     return os.path.join(path, filename)
     

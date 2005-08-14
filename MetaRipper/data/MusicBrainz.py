@@ -6,7 +6,7 @@ from tunepimp import tunepimp
 tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
 
 import re
-DISC_NUM_REGEX = re.compile(r"(.*)\s+\([Dd]isc (\d+)\)")
+DISC_NUM_REGEX = re.compile(r".*\s+\([Dd]isc (\d+)")
 
 def searchMb(device):
     mb = musicbrainz.mb()
@@ -54,8 +54,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
 
     discNumMatches = DISC_NUM_REGEX.findall(album)
     if discNumMatches:
-        album = discNumMatches[0][0]
-        discNum = int(discNumMatches[0][1])
+        discNum = int(discNumMatches[0][0])
     else:
         discNum = 1
         
