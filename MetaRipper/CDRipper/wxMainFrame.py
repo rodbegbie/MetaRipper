@@ -162,23 +162,23 @@ class wxMainFrame(wx.Frame):
         wx.EVT_BUTTON(self, self.button_exit.GetId(), self.onExit)
         wx.EVT_TEXT_ENTER(self, self.text_ctrl_barcode.GetId(), self.checkBarcode)
  
-    def _ripProgress(self, trackNo, secs):
-        trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
-        trackPercent = 0
+    def _ripProgress(self, trackNo, pos, length):
+#        trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
+#        trackPercent = 0
         
-        #TODO: Fix this calculation to make it accurate
+        length = float(length)
         numTracks = float(len(self.discMeta.tracks))
         discPercent = ((trackNo-1) / numTracks) * 100
 
-        if trackLength > 0:
-            trackPercent = int((secs / trackLength) * 100)
-            discPercent = int(discPercent + (trackPercent/numTracks))
+        trackPercent = int((pos / length) * 100)
+        #TODO: Fix this calculation to make it accurate
+        discPercent = int(discPercent + (trackPercent/numTracks))
             
         wx.CallAfter(self.gauge_track.SetValue, trackPercent)
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
-        wx.CallAfter(self.grid_tracks.ClearSelection, [])
+        wx.CallAfter(self.grid_tracks.ClearSelection)
         pass
         
     def onMBDisc(self, event):
