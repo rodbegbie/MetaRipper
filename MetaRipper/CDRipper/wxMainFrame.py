@@ -55,6 +55,7 @@ class wxMainFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
+        self.button_rip.Enable(False)
 
     def __set_properties(self):
         # begin wxGlade: wxMainFrame.__set_properties
@@ -191,7 +192,10 @@ class wxMainFrame(wx.Frame):
                                     int(self.text_ctrl_discOf.GetValue()))
         self.discMeta.country = self.choice_country.GetStringSelection()
         self.discMeta.ripTime = localtime()
-        #TODO:  Disable buttons
+        
+        self.button_refresh.Enable(False)
+        self.button_rip.Enable(False)
+        self.button_eject.Enable(False)
         self._path = makePath(self.discMeta)
         if not self._path:
             pathQuestion = wx.MessageDialog(self, "Overwrite existing files?", "Directory exists",
@@ -219,6 +223,8 @@ class wxMainFrame(wx.Frame):
         f.write(xml)
         f.close()
         #TODO: Alert user somehow
+        self.button_refresh.Enable(True)
+        self.button_eject.Enable(True)
         self._eject()
         
     def onEject(self, event):
@@ -290,10 +296,12 @@ class wxMainFrame(wx.Frame):
             
         self.text_ctrl_barcode.SetValue("")
         self.text_ctrl_barcode.SetFocus()
+        self.button_rip.Enable(True)
 
     def _eject(self):
         import os
         os.system("eject %s" % self._device)
+        self.button_rip.Enable(False)
 
     def _setInfoLabel(self, label, text):
         text = text.replace("&", "&&")  # Display ampersands in labels
