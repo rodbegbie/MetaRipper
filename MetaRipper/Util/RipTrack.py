@@ -14,6 +14,7 @@ def ripTrack(device, trackNo, filename, callbackProgress, callbackComplete):
     cdp = gst.element_factory_make("cdparanoia", "ripper")
     cdp.set_property("device", device)
     cdp.set_property("paranoia-mode", 4)
+    cdp.set_property("abort-on-skip", True)
     track_format = gst.format_get_by_nick("track")
     src_pad = cdp.get_pad("src")
 
