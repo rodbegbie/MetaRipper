@@ -42,35 +42,37 @@ def _makeSafe(string):
             retval = retval + "_"
     return retval
 
-def _makePath(discmeta):
+def makePath(discmeta, overwrite=False, append=False):
     fileroot = "/home/rod/flac" #HACK: Shouldn't be hardcoded
     path = os.path.join(fileroot, _makeSafe(discmeta.artist), _makeSafe(discmeta.title))
+    if os.path.exists(path) and not overwrite:
+        if not append:
+            return None
+        else:
+            i = 1            
+            while True:
+                newTitle = "%s %d" % (discmeta.title, i)
+                path = os.path.join(fileroot, _makeSafe(discmeta.artist), _makeSafe(newTitle))
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                    return path
+                i = i + 1
+                
     if not os.path.exists(path):
         os.makedirs(path)
+        
     return path
     
-
-def makeTrackFilename(discmeta, trackNum):
-    path = _makePath(discmeta)
+def makeTrackFilename(path, discmeta, trackNum):
     track = discmeta.tracks[trackNum-1]
     if discmeta.artist == "Various Artists":
         filename = "%02d - %s - %s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
     else:
         filename = "%02d - %s.flac" % (trackNum, _makeSafe(track.title))
 
-    # Tack on the disc number if necessary
-#    if discmeta.discNumber[1] <> 1:
-#        filename = "%d-%s" % (discmeta.discNumber[0], filename)
-
     return os.path.join(path, filename)
 
-def makeMetadataFilename(discmeta):
-    path = _makePath(discmeta)
+def makeMetadataFilename(path, discmeta):
     filename = "discmetadata.xml"
-
-    # Tack on the disc number if necessary
-#    if discmeta.discNumber[1] <> 1:
-#        filename = "%d-%s" % (discmeta.discNumber[0], filename)
-
     return os.path.join(path, filename)
     

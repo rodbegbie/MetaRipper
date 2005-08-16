@@ -9,7 +9,7 @@ import wx.grid
 from data.DiscMetadata import *
 from data.MusicBrainz import *
 from Util.RipTrack import ripTrack
-import logging, thread, webbrowser
+import logging, threading, webbrowser
 from time import sleep, localtime
 
 
@@ -192,18 +192,29 @@ class wxMainFrame(wx.Frame):
         self.discMeta.country = self.choice_country.GetStringSelection()
         self.discMeta.ripTime = localtime()
         #TODO:  Disable buttons
-        thread.start_new_thread(self._ripThread,())
+        self._path = makePath(self.discMeta)
+        pathQuestion = wx.MessageDialog(self, "Overwrite existing files?", "Directory exists",
+                                         wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_QUESTION,
+                                         )
+        buttonPressed = pathQuestion.ShowModal()
+        if buttonPressed == wx.ID_YES:
+            self._path = makePath(self.discMeta, overwrite=True)
+        elif buttonPressed == wx.ID_NO:
+            self._path = makePath(self.discMeta, append=True)
+
+        if self._path:
+            threading.Thread(None, self._ripThread).start()
         
     def _ripThread(self):
         for trackNum in range(1, len(self.discMeta.tracks) + 1):
             wx.CallAfter(self.grid_tracks.SelectRow, trackNum-1)
-            filename = makeTrackFilename(self.discMeta, trackNum)
+            filename = makeTrackFilename(self._path, self.discMeta, trackNum)
             logging.info("Ripping to %s" % filename)
             ripTrack(self._device, trackNum, filename, self._ripProgress, self._ripComplete)
             writeTags(filename, self.discMeta, trackNum)
         # Dump XML
         xml = self.discMeta.dumps()
-        f = open(makeMetadataFilename(self.discMeta), "w")
+        f = open(makeMetadataFilename(self._path, self.discMeta), "w")
         f.write(xml)
         f.close()
         #TODO: Alert user somehow
