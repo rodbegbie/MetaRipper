@@ -193,14 +193,15 @@ class wxMainFrame(wx.Frame):
         self.discMeta.ripTime = localtime()
         #TODO:  Disable buttons
         self._path = makePath(self.discMeta)
-        pathQuestion = wx.MessageDialog(self, "Overwrite existing files?", "Directory exists",
-                                         wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_QUESTION,
-                                         )
-        buttonPressed = pathQuestion.ShowModal()
-        if buttonPressed == wx.ID_YES:
-            self._path = makePath(self.discMeta, overwrite=True)
-        elif buttonPressed == wx.ID_NO:
-            self._path = makePath(self.discMeta, append=True)
+        if not self._path:
+            pathQuestion = wx.MessageDialog(self, "Overwrite existing files?", "Directory exists",
+                                             wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_QUESTION,
+                                             )
+            buttonPressed = pathQuestion.ShowModal()
+            if buttonPressed == wx.ID_YES:
+                self._path = makePath(self.discMeta, overwrite=True)
+            elif buttonPressed == wx.ID_NO:
+                self._path = makePath(self.discMeta, append=True)
 
         if self._path:
             threading.Thread(None, self._ripThread).start()
