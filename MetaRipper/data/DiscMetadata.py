@@ -7,6 +7,7 @@ class DiscMetadata(XML_Pickler):
     def __init__ (self):
         self.title = ""
         self.artist = ""
+        self.artistSort = ""
         self.toc = []
         self.mbAlbumId = ""
         self.mbDiscId = ""
@@ -44,7 +45,7 @@ def _makeSafe(string):
 
 def makePath(discmeta, overwrite=False, append=False):
     fileroot = "/home/rod/flac" #HACK: Shouldn't be hardcoded
-    path = os.path.join(fileroot, _makeSafe(discmeta.artist), _makeSafe(discmeta.title))
+    path = os.path.join(fileroot, _makeSafe(discmeta.artistSort), _makeSafe(discmeta.title))
     if os.path.exists(path) and not overwrite:
         if not append:
             return None
@@ -52,7 +53,7 @@ def makePath(discmeta, overwrite=False, append=False):
             i = 1            
             while True:
                 newTitle = "%s %d" % (discmeta.title, i)
-                path = os.path.join(fileroot, _makeSafe(discmeta.artist), _makeSafe(newTitle))
+                path = os.path.join(fileroot, _makeSafe(discmeta.artistSort), _makeSafe(newTitle))
                 if not os.path.exists(path):
                     os.makedirs(path)
                     return path

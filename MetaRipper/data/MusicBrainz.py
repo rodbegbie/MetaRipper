@@ -55,9 +55,11 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     if artId != q.MBI_VARIOUS_ARTIST_ID:
         artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1 + ((disc-1) * numTracks))
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1 + ((disc-1) * numTracks))
         va = False
     else:
         artist = "Various Artists"
+        artistSort = "Various Artists"
         va = True
 
     discNumMatches = DISC_NUM_REGEX.findall(album)
@@ -68,6 +70,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         
     discMeta.title = album
     discMeta.artist = artist
+    discMeta.artistSort = artistSort
     discMeta.mbDiscId = cdid
     discMeta.toc = toc
     discMeta.mbAlbumId = albid
@@ -112,6 +115,7 @@ def writeTags(filename, discMeta, trackNum):
 
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist
+    mdata.sortName = trackMeta.artistSort
     mdata.artistId = trackMeta.mbArtistId
     mdata.track = trackMeta.title
     mdata.trackId = trackMeta.mbTrackId
