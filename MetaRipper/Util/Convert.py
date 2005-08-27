@@ -41,6 +41,15 @@ if __name__ == "__main__":
             if file.endswith(".flac"):
                 flacfile = os.path.join(root,file)
                 mp3file = flacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
-                #print "Woudl convert %s to %s" %  (flacfile, mp3file)
-                convert(flacfile,mp3file)
+                conv = True
+                if os.path.exists(mp3file):
+                    print "file already there"
+                    mp3date = os.path.getmtime(mp3file)
+                    flacdate = os.path.getmtime(flacfile)
+                    if flacdate < mp3date:
+                        conv = False
+                
+                if conv:
+                    #print "Woudl convert %s to %s" %  (flacfile, mp3file)
+                    convert(flacfile,mp3file)
     
