@@ -6,20 +6,20 @@ from data.DiscMetadata import DiscMetadata
 amazon.setLicense("1AGTVVHBTYPBQKT7G482")
 
 def getAmazonInfoByUPC(discmeta):
-    if discmeta.country == "US":
-        if discmeta.barcode:
-            try:
-                res = amazon.searchByUPC(discmeta.barcode)
-            except:
-                print "Amazon search failed"
-                return None
-                
-            asin = res[0].Asin
-            image = getBestImage([res[0].ImageUrlLarge,
-                                  res[0].ImageUrlMedium,
-                                  res[0].ImageUrlSmall])
+#    if discmeta.country == "US":
+    if discmeta.barcode:
+        try:
+            res = amazon.searchByUPC(discmeta.barcode)
+        except:
+            print "Amazon search failed"
+            return None
             
-            return ("us", asin, image)
+        asin = res[0].Asin
+        image = getBestImage([res[0].ImageUrlLarge,
+                              res[0].ImageUrlMedium,
+                              res[0].ImageUrlSmall])
+        
+        return ("us", asin, image)
 
     return None
             
@@ -73,7 +73,10 @@ if __name__ == "__main__":
             else:
                 print "Fetching %s" % discmeta.title                
                 inf = getAmazonInfoByUPC(discmeta)
-                if inf:
+                if not inf:
+                    print "Amazon gave me nuffink"
+                else:
+                    print "got ASIN"
                     discmeta.amazonStore = inf[0]
                     discmeta.amazonAsin = inf[1]
                     if inf[2]:
@@ -81,10 +84,11 @@ if __name__ == "__main__":
                         f = open(coverjpg, "wb")
                         f.write(jpg)
                         f.close()
-                        print "Wrote jpg"
+                        print "got cover jpg"
                     
                     os.rename(discmetafile, discmetafile+".bak")
                     
+                    print "saving %s" % discmetafile
                     f = open(discmetafile, "w")
                     xml = gnosis.xml.pickle.dumps(discmeta)
                     f.write(xml)
