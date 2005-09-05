@@ -82,6 +82,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
             artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
+            artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
             artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
         dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
         trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
@@ -90,6 +91,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         trackMeta = TrackMetadata()
         trackMeta.title = name
         trackMeta.artist = artist
+        trackMeta.artistSort = artistSort
         trackMeta.number = track
         trackMeta.length = int(dura)
         trackMeta.mbTrackId = trackId
