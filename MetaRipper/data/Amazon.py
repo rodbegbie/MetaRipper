@@ -1,7 +1,7 @@
 from Util import amazon
 import urllib
 import ImageFile
-from DiscMetadata import DiscMetadata
+from data.DiscMetadata import DiscMetadata
 
 amazon.setLicense("1AGTVVHBTYPBQKT7G482")
 
@@ -15,9 +15,9 @@ def getAmazonInfoByUPC(discmeta):
                 return None
                 
             asin = res[0].Asin
-            image = getBestImage(res[0].ImageUrlLarge,
-                                 res[0].ImageUrlMedium,
-                                 res[0].ImageUrlSmall)
+            image = getBestImage([res[0].ImageUrlLarge,
+                                  res[0].ImageUrlMedium,
+                                  res[0].ImageUrlSmall])
             
             return ("us", asin, image)
 
@@ -55,17 +55,17 @@ def getsizes(uri):
     
 if __name__ == "__main__":
     import os
+    import gnosis.xml.pickle
     for root, dirs, files in os.walk("/home/rod/flac"):
         discmetafile = os.path.join(root, "discmetadata.xml")
         coverjpg = os.path.join(root, "cover.jpg")
 
         if os.path.exists(discmetafile):
-            discmeta = DiscMetadata()
             print "opening %s" % discmetafile
             f = open(discmetafile, "r")
             xml = f.read()
-            print xml
-            DiscMetadata.loads(discmeta, xml)
+            #print xml
+            discmeta = gnosis.xml.pickle.loads(xml)
             f.close()
             
             if discmeta.amazonAsin:
@@ -83,8 +83,10 @@ if __name__ == "__main__":
                         f.close()
                         print "Wrote jpg"
                     
+                    os.rename(discmetafile, discmetafile+".bak")
+                    
                     f = open(discmetafile, "w")
-                    xml = discmeta.dumps()
+                    xml = gnosis.xml.pickle.dumps(discmeta)
                     f.write(xml)
                     f.close()
                     
