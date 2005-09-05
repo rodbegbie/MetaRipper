@@ -5,11 +5,10 @@ from data.DiscMetadata import DiscMetadata
 
 amazon.setLicense("1AGTVVHBTYPBQKT7G482")
 
-def getAmazonInfoByUPC(discmeta):
-#    if discmeta.country == "US":
-    if discmeta.barcode:
+def getAmazonInfoByUPC(barcode):
+    if barcode:
         try:
-            res = amazon.searchByUPC(discmeta.barcode)
+            res = amazon.searchByUPC(barcode)
         except:
             print "Amazon search failed"
             return None
@@ -69,10 +68,10 @@ if __name__ == "__main__":
             f.close()
             
             if discmeta.amazonAsin:
-                print "Skipping %s:  Already have ASIN" % discmeta.title
+                print u"Skipping %s:  Already have ASIN" % discmeta.title
             else:
-                print "Fetching %s" % discmeta.title                
-                inf = getAmazonInfoByUPC(discmeta)
+                print "Fetching %s" % discmeta.title.decode("ascii",'ignore')
+                inf = getAmazonInfoByUPC(discmeta.barcode)
                 if not inf:
                     print "Amazon gave me nuffink"
                 else:

@@ -1,5 +1,6 @@
 import gst
 import os
+import pyid3lib
 
 def error_cb(bin, element, error, debug):
     print error
@@ -37,13 +38,25 @@ if __name__ == "__main__":
         mp3dir = root.replace("/flac/", "/mp3/")
         if not os.path.exists(mp3dir):
             os.makedirs(mp3dir)
+            
+        if os.path.exists(os.path.join(root, "cover.jpg")) and not os.path.exists(os.path.join(mp3dir, "cover.jpg")):
+            cin = open(os.path.join(root, "cover.jpg"), "rb")
+            cout = open(os.path.join(mp3dir, "cover.jpg"), "wb")
+            coverjpg = cin.read()
+            cout.write(coverjpg)
+            cin.close()
+            cout.close()
+            cover = True
+        else:
+            cover = False
+            
         for file in files:
             if file.endswith(".flac"):
                 flacfile = os.path.join(root,file)
                 mp3file = flacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
                 conv = True
                 if os.path.exists(mp3file):
-                    print "file already there"
+                    print "%s already there" % mp3file
                     mp3date = os.path.getmtime(mp3file)
                     flacdate = os.path.getmtime(flacfile)
                     if flacdate < mp3date:
@@ -53,3 +66,14 @@ if __name__ == "__main__":
                     #print "Woudl convert %s to %s" %  (flacfile, mp3file)
                     convert(flacfile,mp3file)
     
+                if cover:
+                    print "Adding cover to MP3 ID3 tags"
+                    tag = pyid3lib.tag(mp3file)
+                    d = { 'frameid': 'APIC',
+                          'mimetype': 'image/jpeg',
+                          'picturetype': 3,
+                          'description': 'cover',
+                          'data': coverjpg,
+                        }
+                    tag.append(d)
+                    tag.update()

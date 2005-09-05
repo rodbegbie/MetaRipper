@@ -8,6 +8,7 @@ import wx.grid
 
 from data.DiscMetadata import *
 from data.MusicBrainz import *
+from data.Amazon import getAmazonInfoByUPC
 from Util.RipTrack import ripTrack
 import logging, threading, webbrowser
 from time import sleep, localtime
@@ -31,9 +32,9 @@ class wxMainFrame(wx.Frame):
         self.label_3 = wx.StaticText(self.panel_info, -1, "CD Artist")
         self.label_cdArtist = wx.StaticText(self.panel_info, -1, "label_4")
         self.label_5 = wx.StaticText(self.panel_info, -1, "MB Disc ID:")
-        self.button_mbdisc = wx.Button(self.panel_info, -1, "mbDiscId", style=wx.BU_EXACTFIT)
-        self.label_6 = wx.StaticText(self.panel_info, -1, "Release Date:")
-        self.label_releaseDate = wx.StaticText(self.panel_info, -1, "label_7")
+        self.button_mbdisc = wx.Button(self.panel_info, -1, "mbDiscId", style=wx.BU_LEFT)
+        self.label_6 = wx.StaticText(self.panel_info, -1, "Amazon ASIN:")
+        self.button_amazon = wx.Button(self.panel_info, -1, "amazon.com", style=wx.BU_LEFT|wx.BU_EXACTFIT)
         self.label_8 = wx.StaticText(self.panel_info, -1, "Barcode:")
         self.text_ctrl_barcode = wx.TextCtrl(self.panel_info, -1, "", style=wx.TE_PROCESS_ENTER)
         self.label_9 = wx.StaticText(self.panel_info, -1, "Disc No")
@@ -62,6 +63,8 @@ class wxMainFrame(wx.Frame):
         self.SetTitle("MetaRipper - CDRipper")
         self.button_mbdisc.SetForegroundColour(wx.Colour(0, 0, 255))
         self.button_mbdisc.SetFont(wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 1, ""))
+        self.button_amazon.SetForegroundColour(wx.Colour(0, 0, 255))
+        self.button_amazon.SetFont(wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 1, ""))
         self.text_ctrl_barcode.SetSize((110, 25))
         self.text_ctrl_discNum.SetSize((40, 25))
         self.text_ctrl_discOf.SetSize((40, 25))
@@ -98,9 +101,9 @@ class wxMainFrame(wx.Frame):
         grid_sizer_3.Add(self.label_3, 0, wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_cdArtist, 0, wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_5, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
-        grid_sizer_3.Add(self.button_mbdisc, 0, wx.FIXED_MINSIZE, 0)
-        grid_sizer_3.Add(self.label_6, 0, wx.FIXED_MINSIZE, 0)
-        grid_sizer_3.Add(self.label_releaseDate, 0, wx.FIXED_MINSIZE, 0)
+        grid_sizer_3.Add(self.button_mbdisc, 0, wx.EXPAND|wx.FIXED_MINSIZE, 0)
+        grid_sizer_3.Add(self.label_6, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
+        grid_sizer_3.Add(self.button_amazon, 0, wx.EXPAND|wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_8, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.text_ctrl_barcode, 0, wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_9, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
@@ -157,6 +160,7 @@ class wxMainFrame(wx.Frame):
         self.Layout()
         # end wxGlade
         wx.EVT_BUTTON(self, self.button_mbdisc.GetId(), self.onMBDisc)
+        wx.EVT_BUTTON(self, self.button_amazon.GetId(), self.onAmazon)
         wx.EVT_BUTTON(self, self.button_eject.GetId(), self.onEject)
         wx.EVT_BUTTON(self, self.button_refresh.GetId(), self.onRefresh)
         wx.EVT_BUTTON(self, self.button_rip.GetId(), self.onRip)
@@ -186,11 +190,18 @@ class wxMainFrame(wx.Frame):
         url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
         webbrowser.open_new(url)
     
+    def onAmazon(self, event):
+        if self.amazonASIN:
+            url = "http://www.amazon.com/o/ASIN/%s/groovymother-20/ref=nosim/" % self.amazonASIN
+            webbrowser.open_new(url)
+    
     def onRip(self, event):
         self.discMeta.barcode = self.text_ctrl_barcode.GetValue()
         self.discMeta.discNumber = (int(self.text_ctrl_discNum.GetValue()),
                                     int(self.text_ctrl_discOf.GetValue()))
         self.discMeta.country = self.choice_country.GetStringSelection()
+        self.discMeta.amazonAsin = self.amazonASIN
+        self.discMeta.amazonStore = self.amazonStore
         self.discMeta.ripTime = localtime()
         
         self.button_refresh.Enable(False)
@@ -219,9 +230,15 @@ class wxMainFrame(wx.Frame):
             writeTags(filename, self.discMeta, trackNum)
         # Dump XML
         xml = self.discMeta.dumps()
-        f = open(makeMetadataFilename(self._path, self.discMeta), "w")
+        f = open(os.path.join(self._path, "discmetadata.xml"), "w")
         f.write(xml)
         f.close()
+        # Save cover
+        if self.coverjpg:
+            jpg = urllib.urlopen(self.coverjpg).read()
+            f = open(os.path.join(self._path, "cover.jpg"), "w")
+            f.write(jpg)
+            f.close()
         #TODO: Alert user somehow
         self.button_refresh.Enable(True)
         self.button_eject.Enable(True)
@@ -243,9 +260,18 @@ class wxMainFrame(wx.Frame):
                 self.choice_country.SetSelection(1)
             else:
                 self.choice_country.SetSelection(0)
+                
+            res = getAmazonInfoByUPC(bc)
+            if res:
+                self.amazonStore = res[0]
+                self.amazonASIN = res[1]
+                self._setInfoLabel(self.button_amazon, "%s (%s)" % (res[1], res[0]))
+                self.coverjpg = res[2]
 
     def onRefresh(self, event):
         discMeta = None
+        self.amazonStore = self.amazonASIN = self.coverjpg = None
+        
         self._ripping = False
         (mb, toc, numFound, info) = searchMb(self._device)
         if numFound == 1:
