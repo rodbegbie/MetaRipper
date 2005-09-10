@@ -104,17 +104,19 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     return discMeta
 
 def writeTags(filename, discMeta, trackNum):
-    fileId = tp.addFile(filename)
-    
     tp.setMoveFiles(False)
     tp.setRenameFiles(False)
+    tp.setWriteID3v1(True)
+    tp.setClearTags(True)
+    tp.setID3Encoding(tunepimp.eUTF8)
+    fileId = tp.addFile(filename)
     tr = tp.getTrack(fileId);
     tr.lock()
     mdata = tr.getServerMetadata()
     mdata.album = discMeta.title
     mdata.albumId = discMeta.mbAlbumId
     mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
-
+   
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist
     mdata.sortName = trackMeta.artistSort
