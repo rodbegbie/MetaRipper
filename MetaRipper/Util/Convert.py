@@ -1,5 +1,5 @@
 import gst
-import os
+import os,sys
 import eyeD3
 from data.MusicBrainz import *
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                         trackNum = int(file[0:2])
                         writeTags(mp3file, discmeta, trackNum)
                     except:
-                        print "failed doing the tagwriting thing"
+                        print "failed doing the tagwriting thing:",  sys.exc_info()[0]
     
                 if cover and not gotCover:
                     tag.link(mp3file)
