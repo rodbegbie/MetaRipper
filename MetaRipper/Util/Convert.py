@@ -78,13 +78,10 @@ if __name__ == "__main__":
 
                 tag.link(mp3file)
                 gotMB = False
-                gotCover = False
                 
                 for frame in tag.frames:
                     if frame.header.id == 'UFID':
                         gotMB = True
-                    if frame.header.id == 'APIC':
-                        gotCover = True
 
                 if not gotMB:
                     try:
@@ -94,6 +91,13 @@ if __name__ == "__main__":
                     except:
                         print "failed doing the tagwriting thing:",  sys.exc_info()[0]
     
+                tag.link(mp3file)
+                gotCover = False
+                
+                for frame in tag.frames:
+                    if frame.header.id == 'APIC':
+                        gotCover = True
+
                 if cover and not gotCover:
                     tag.link(mp3file)
                     print "Adding cover to MP3 ID3 tags"
