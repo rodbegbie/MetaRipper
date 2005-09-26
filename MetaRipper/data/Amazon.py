@@ -85,8 +85,8 @@ if __name__ == "__main__":
                         f.close()
                         print "got cover jpg"
                     
-                    os.rename(discmetafile, discmetafile+".bak")
-                    
+                    os.renames(discmetafile, discmetafile+".bak")
+
                     print "saving %s" % discmetafile
                     f = open(discmetafile, "w")
                     xml = gnosis.xml.pickle.dumps(discmeta)

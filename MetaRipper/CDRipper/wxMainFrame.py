@@ -273,7 +273,7 @@ class wxMainFrame(wx.Frame):
         self.amazonStore = self.amazonASIN = self.coverjpg = None
         
         self._ripping = False
-        (mb, toc, numFound, info) = searchMb(self._device)
+        (mb, toc, numFound, info) = searchMbForDisc(self._device)
         if numFound == 1:
             cdid = info[0]
             numTracks = info[1]

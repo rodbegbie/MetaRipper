@@ -28,6 +28,7 @@ class TrackMetadata(XML_Pickler):
         self.number = 0
         self.title = ""
         self.artist = ""
+        self.artistSort = ""
         self.length = 0
         self.mbArtistId = ""
         self.mbTrackId = ""
@@ -61,6 +62,7 @@ def makePath(discmeta, overwrite=False, append=False):
                 
     if not os.path.exists(path):
         os.makedirs(path)
+        pass
         
     return path
     

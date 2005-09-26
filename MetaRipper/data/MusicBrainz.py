@@ -8,7 +8,7 @@ tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
 import re
 DISC_NUM_REGEX = re.compile(r".*\s+\([Dd]isc (\d+)")
 
-def searchMb(device):
+def searchMbForDisc(device):
     mb = musicbrainz.mb()
     mb.SetDepth(2)
     mb.SetDevice(device)
@@ -37,6 +37,21 @@ def searchMb(device):
     else:
         return (mb, toc, numFound, (cdid, numTracks))
     
+def searchMbByDiscId(discId):
+    mb = musicbrainz.mb()
+    mb.SetDepth(4)
+
+    logging.info("querying musicbrainz.org to see if this cd is on there...")
+    mb.QueryWithArgs(q.MBQ_GetAlbumById, [discId])
+    
+    numFound = mb.GetResultInt(q.MBE_GetNumAlbums)
+
+    if numFound == 0:
+        print "*** DISC ID NO LONGER VALID ***"
+        return None
+    else:
+        return mb
+    
 def getDiscNames(mb, numDiscs):
     names = []
     for i in range (1, numDiscs + 1):
@@ -48,7 +63,6 @@ def getDiscNames(mb, numDiscs):
 
 def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta = DiscMetadata()            
-    logging.info("Yes and here's the info:")
     mb.Select1(q.MBS_SelectAlbum, disc)            
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
@@ -103,6 +117,81 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
                         
     return discMeta
 
+def updateDiscMetadata(mb, discMeta):
+    mb.Select1(q.MBS_SelectAlbum, 1)            
+    album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
+    albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
+    artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
+    if artId != q.MBI_VARIOUS_ARTIST_ID:
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
+        va = False
+    else:
+        artist = "Various Artists"
+        artistSort = "Various Artists"
+        va = True
+
+    discchanges = False
+
+    if not hasattr(discMeta, "artistSort"):
+        discMeta.artistSort = discMeta.artist
+    
+    pieces = [    
+        ("title", album),
+        ("artist", artist),
+        ("artistSort", artistSort),
+        ("mbArtistId", artId)
+    ]
+    
+    for (discpiecename, newpiece) in pieces:
+        discpiece = getattr(discMeta, discpiecename)
+        if discpiece <> newpiece:
+            print "Changing %s to %s" % (discpiece, newpiece)
+            setattr(discMeta, discpiecename, newpiece)
+            discchanges = True
+    
+    anytrackchanges = False
+    
+    for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, 1) + 1):
+        name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
+        if va:
+            artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
+            artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
+            artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
+        dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
+        trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
+        trackId = mb.GetIDFromURL(trackURI)
+        track = mb.GetOrdinalFromList(q.MBE_AlbumGetTrackList, trackURI)
+
+        trackMeta = discMeta.tracks[ii-1]
+        if not hasattr(trackMeta, "artistSort"):
+            trackMeta.artistSort = trackMeta.artist
+        
+        pieces = [
+            ("title", name),
+            ("artist", artist),
+            ("artistSort", artistSort),
+            ("mbTrackId", trackId),
+            ("mbArtistId", artId)
+        ]
+
+        thistrackchanges = False
+        for (trackpiecename, newpiece) in pieces:
+            trackpiece = getattr(trackMeta, trackpiecename)
+            if trackpiece <> newpiece:
+                print "Changing %s to %s" % (trackpiece, newpiece)
+                setattr(trackMeta, trackpiecename, newpiece)
+                thistrackchanges = True
+        
+        if thistrackchanges:
+            discMeta.tracks[ii-1] = trackMeta
+            anytrackchanges = True
+
+    if (discchanges or anytrackchanges):
+        return (discMeta, discchanges)
+    else:
+        return (None, False)
+
 def writeTags(filename, discMeta, trackNum):
     tp.setMoveFiles(False)
     tp.setRenameFiles(False)
@@ -119,7 +208,8 @@ def writeTags(filename, discMeta, trackNum):
    
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist
-    mdata.sortName = trackMeta.artistSort
+    if hasattr(trackMeta, "artistSort"):
+        mdata.sortName = trackMeta.artistSort
     mdata.artistId = trackMeta.mbArtistId
     mdata.track = trackMeta.title
     mdata.trackId = trackMeta.mbTrackId
