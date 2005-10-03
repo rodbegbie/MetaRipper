@@ -1,6 +1,6 @@
 import gst
 import os,sys
-import eyeD3
+from eyeD3 import Tag, FrameHeader, TextFrame
 from data.MusicBrainz import *
 
 def error_cb(bin, element, error, debug):
@@ -36,7 +36,7 @@ def convert(flacfile, mp3file):
     
 if __name__ == "__main__":
     import gnosis.xml.pickle    
-    tag = eyeD3.Tag()
+    tag = Tag()
     for root, dirs, files in os.walk("/home/rod/flac"):
         mp3dir = root.replace("/flac/", "/mp3/")
         if not os.path.exists(mp3dir):
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         if os.path.exists(discmetafile):
             f = open(discmetafile, "r")
             xml = f.read()
-            discmeta = gnosis.xml.pickle.loads(xml)
+            discMeta = gnosis.xml.pickle.loads(xml)
             f.close()
             
         coverfilename = os.path.join(root, "cover.jpg")
@@ -78,28 +78,46 @@ if __name__ == "__main__":
 
                 tag.link(mp3file)
                 gotMB = False
+                trackNum = int(file[0:2])
                 
                 for frame in tag.frames:
                     if frame.header.id == 'UFID':
                         gotMB = True
+                        break
 
                 if not gotMB:
                     try:
                         print "Adding MB info to MP3 ID3 tags"
-                        trackNum = int(file[0:2])
-                        writeTags(mp3file, discmeta, trackNum)
+                        writeTags(mp3file, discMeta, trackNum)
                     except:
                         print "failed doing the tagwriting thing:",  sys.exc_info()[0]
-    
+                
+                # Reload the tags now that TunePimp's done its stuff
+                tag = Tag()
                 tag.link(mp3file)
                 gotCover = False
+                gotTPOS = False
                 
                 for frame in tag.frames:
                     if frame.header.id == 'APIC':
                         gotCover = True
-
+                    if frame.header.id == 'TPOS':
+                        gotTPOS = True
+                        
                 if cover and not gotCover:
                     tag.link(mp3file)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
+                    tag.update()
+                    
+                if not gotTPOS:
+                    print "Updating TPOS/TRCK fields"
+                    tposHeader = FrameHeader(tag.header)
+                    tposHeader.id = "TPOS"
+                    tpos = TextFrame(tposHeader)
+                    tpos.text = "%d/%d" % discMeta.discNumber
+                    tag.frames.append(tpos)
+
+                    # Also update the TRCK to be in x/y format
+                    tag.frames["TRCK"][0].text = "%d/%d" % (trackNum, len(discMeta.tracks))
                     tag.update()
