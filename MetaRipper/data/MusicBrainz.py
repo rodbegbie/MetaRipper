@@ -122,6 +122,26 @@ def updateDiscMetadata(mb, discMeta):
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
+    releaseYear = None
+    
+    try:
+        numReleases = mb.GetResultInt(q.MBE_AlbumGetNumReleaseDates)
+        for i in xrange(1, numReleases + 1):
+            mb.Select1(q.MBS_SelectReleaseDate, i)
+            releaseDate = mb.GetResultData(q.MBE_ReleaseGetDate)
+            releaseCountry = mb.GetResultData(q.MBE_ReleaseGetCountry)
+
+            thisReleaseYear = int(releaseDate[0:4])
+            if releaseYear == None or thisReleaseYear < releaseYear:
+                releaseYear = thisReleaseYear
+
+            mb.Select(musicbrainz.MBS_Back)
+
+    except musicbrainz.MusicBrainzError:
+        print "error getting date"
+        pass
+        
+    
     if artId != q.MBI_VARIOUS_ARTIST_ID:
         artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
         artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
@@ -132,23 +152,26 @@ def updateDiscMetadata(mb, discMeta):
         va = True
 
     discchanges = False
+    dirchange = False
 
     if not hasattr(discMeta, "artistSort"):
         discMeta.artistSort = discMeta.artist
     
     pieces = [    
-        ("title", album),
-        ("artist", artist),
-        ("artistSort", artistSort),
-        ("mbArtistId", artId)
+        ("title", album, True),
+        ("artist", artist, False),
+        ("artistSort", artistSort, True),
+        ("mbArtistId", artId, False),
+        ("releaseDate", releaseYear, False)
     ]
     
-    for (discpiecename, newpiece) in pieces:
+    for (discpiecename, newpiece, needsrenaming) in pieces:
         discpiece = getattr(discMeta, discpiecename)
         if discpiece <> newpiece:
             print "Changing %s to %s" % (discpiece, newpiece)
             setattr(discMeta, discpiecename, newpiece)
             discchanges = True
+            dirchange = dirchange or needsrenaming
     
     anytrackchanges = False
     
@@ -188,7 +211,7 @@ def updateDiscMetadata(mb, discMeta):
             anytrackchanges = True
 
     if (discchanges or anytrackchanges):
-        return (discMeta, discchanges)
+        return (discMeta, dirchange)
     else:
         return (None, False)
 
@@ -204,7 +227,9 @@ def writeTags(filename, discMeta, trackNum):
     mdata = tr.getServerMetadata()
     mdata.album = discMeta.title
     mdata.albumId = discMeta.mbAlbumId
+    #mdata.albumArtistId = discMeta.mbArtistId
     mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
+    mdata.releaseYear = discMeta.releaseDate
    
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist

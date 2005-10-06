@@ -2,9 +2,36 @@ import os,sys
 from data.MusicBrainz import *
 from data.DiscMetadata import *
 
+def mywalk(top, topdown=True, onerror=None, followlinks=False):
+    from os.path import join, isdir, islink
+
+    # We may not have read permission for top, in which case we can't
+    # get a list of the files the directory contains.  os.path.walk
+    # always suppressed the exception then, rather than blow up for a
+    # minor reason when (say) a thousand readable directories are still
+    # left to visit.  That logic is copied here.
+    names = os.listdir(top)
+
+    dirs, nondirs = [], []
+    for name in names:
+        if isdir(join(top, name)):
+            dirs.append(name)
+        else:
+            nondirs.append(name)
+
+    if topdown:
+        yield top, dirs, nondirs
+    for name in dirs:
+        path = join(top, name)
+        if followlinks or  not islink(path):
+            for x in mywalk(path, topdown, onerror, followlinks):
+                yield x
+    if not topdown:
+        yield top, dirs, nondirs
+
 if __name__ == "__main__":
     import gnosis.xml.pickle    
-    for root, dirs, files in os.walk("/home/rod/flac"):
+    for root, dirs, files in mywalk("/home/rod/flac", followlinks=True):
         discmetafile = os.path.join(root, "discmetadata.xml")
 
         if os.path.exists(discmetafile):
@@ -45,7 +72,10 @@ if __name__ == "__main__":
         else:
             newpath = root
 
+        print "Saving new metadata file"
         newdiscmetafile = makeMetadataFilename(newpath, "discmetadata.xml")
+        if os.path.exists(discmetafile+".bak"):
+            os.unlink(discmetafile+".bak")
         os.renames(discmetafile, newdiscmetafile+".bak")
         f = open(newdiscmetafile, "w")
         xml = gnosis.xml.pickle.dumps(discmeta)
@@ -72,7 +102,6 @@ if __name__ == "__main__":
                         writeTags(mp3file, discmeta, trackNum)
                     except:
                         print "failed doing the tagwriting thing:",  sys.exc_info()[0]
-    
                     if mp3file <> newmp3file:
                         print "Moving MP3 file %s" % mp3file
                         os.renames(mp3file, newmp3file)

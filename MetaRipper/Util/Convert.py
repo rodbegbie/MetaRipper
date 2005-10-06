@@ -97,6 +97,7 @@ if __name__ == "__main__":
                 tag.link(mp3file)
                 gotCover = False
                 gotTPOS = False
+                gotTYER = False
                 
                 for frame in tag.frames:
                     if frame.header.id == 'APIC':
@@ -120,4 +121,9 @@ if __name__ == "__main__":
 
                     # Also update the TRCK to be in x/y format
                     tag.frames["TRCK"][0].text = "%d/%d" % (trackNum, len(discMeta.tracks))
+                    tag.update()
+                    
+                if discMeta.releaseDate and not tag.getDate():
+                    print "Setting release year"
+                    tag.setDate(discMeta.releaseDate)
                     tag.update()
