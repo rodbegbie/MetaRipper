@@ -2,6 +2,7 @@ import gst
 import os,sys
 from eyeD3 import Tag, FrameHeader, TextFrame
 from data.MusicBrainz import *
+from Util import walk
 
 def error_cb(bin, element, error, debug):
     print error
@@ -37,7 +38,7 @@ def convert(flacfile, mp3file):
 if __name__ == "__main__":
     import gnosis.xml.pickle    
     tag = Tag()
-    for root, dirs, files in os.walk("/home/rod/flac"):
+    for root, dirs, files in walk("/home/rod/flac", followlinks=True):
         mp3dir = root.replace("/flac/", "/mp3/")
         if not os.path.exists(mp3dir):
             os.makedirs(mp3dir)
