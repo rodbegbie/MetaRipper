@@ -76,6 +76,24 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         artistSort = "Various Artists"
         va = True
 
+    releaseYear = None
+    
+    try:
+        numReleases = mb.GetResultInt(q.MBE_AlbumGetNumReleaseDates)
+        for i in xrange(1, numReleases + 1):
+            mb.Select1(q.MBS_SelectReleaseDate, i)
+            releaseDate = mb.GetResultData(q.MBE_ReleaseGetDate)
+            releaseCountry = mb.GetResultData(q.MBE_ReleaseGetCountry)
+    
+            thisReleaseYear = int(releaseDate[0:4])
+            if releaseYear == None or thisReleaseYear < releaseYear:
+                releaseYear = thisReleaseYear
+
+            mb.Select(musicbrainz.MBS_Back)
+
+    except musicbrainz.MusicBrainzError:
+        print "error getting date"
+
     discNumMatches = DISC_NUM_REGEX.findall(album)
     if discNumMatches:
         discNum = int(discNumMatches[0][0])
@@ -90,6 +108,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.mbAlbumId = albid
     discMeta.mbArtistId = artId
     discMeta.discNumber = (discNum, discNum)
+    discMeta.releaseDate = releaseYear
     
     logging.info("\t%s / %s" % (artist, album))
     for ii in range(1 + ((disc-1) * numTracks), mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
@@ -139,7 +158,6 @@ def updateDiscMetadata(mb, discMeta):
 
     except musicbrainz.MusicBrainzError:
         print "error getting date"
-        pass
         
     
     if artId != q.MBI_VARIOUS_ARTIST_ID:
@@ -229,7 +247,8 @@ def writeTags(filename, discMeta, trackNum):
     mdata.albumId = discMeta.mbAlbumId
     #mdata.albumArtistId = discMeta.mbArtistId
     mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
-    mdata.releaseYear = discMeta.releaseDate
+    if discMeta.releaseDate:
+        mdata.releaseYear = discMeta.releaseDate
    
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist

@@ -69,9 +69,9 @@ def makePath(discmeta, overwrite=False, append=False):
 def makeTrackFilename(path, discmeta, trackNum):
     track = discmeta.tracks[trackNum-1]
     if discmeta.artist == "Various Artists":
-        filename = "%02d - %s - %s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
+        filename = "%02d-%s-%s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
     else:
-        filename = "%02d - %s.flac" % (trackNum, _makeSafe(track.title))
+        filename = "%02d-%s.flac" % (trackNum, _makeSafe(track.title))
 
     return os.path.join(path, filename)
 
