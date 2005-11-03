@@ -3,6 +3,7 @@
 
 import wx
 from data.Amazon import getAmazonInfoByString
+import dirctrl
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -17,6 +18,7 @@ class CoverGrabberFrame(wx.Frame):
         self.panel_searchparam = wx.Panel(self.panel_main, -1)
         self.sizer_3_staticbox = wx.StaticBox(self.panel_searchparam, -1, "Search")
         self.frame_statusbar = self.CreateStatusBar(1, wx.ST_SIZEGRIP)
+        self.directories = dirctrl.GrabberDirCtrl(self, -1)
         self.checkbox_album = wx.CheckBox(self.panel_searchparam, -1, "Album")
         self.label_album = wx.StaticText(self.panel_searchparam, -1, "")
         self.checkbox_artist = wx.CheckBox(self.panel_searchparam, -1, "Artist")
@@ -32,6 +34,8 @@ class CoverGrabberFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
 
+        self.Bind(wx.EVT_CHECKBOX, self.__buildSearchString, self.checkbox_album)
+        self.Bind(wx.EVT_CHECKBOX, self.__buildSearchString, self.checkbox_artist)
         self.Bind(wx.EVT_TEXT_ENTER, self.searchAmazon, self.text_ctrl_search)
         self.Bind(wx.EVT_BUTTON, self.searchAmazon, self.button_search)
         self.Bind(wx.EVT_LISTBOX, self.displayCover, self.list_box_results)
@@ -46,6 +50,7 @@ class CoverGrabberFrame(wx.Frame):
         frame_statusbar_fields = ["OK"]
         for i in range(len(frame_statusbar_fields)):
             self.frame_statusbar.SetStatusText(frame_statusbar_fields[i], i)
+        self.directories.SetMinSize((200,50))
         self.checkbox_album.SetValue(1)
         self.checkbox_artist.SetValue(1)
         self.choice_store.SetSelection(0)
@@ -56,13 +61,14 @@ class CoverGrabberFrame(wx.Frame):
 
     def __do_layout(self):
         # begin wxGlade: CoverGrabberFrame.__do_layout
-        sizer_1 = wx.FlexGridSizer(1, 1, 0, 0)
+        sizer_1 = wx.FlexGridSizer(1, 2, 0, 0)
         grid_sizer_1 = wx.FlexGridSizer(2, 1, 0, 0)
         grid_sizer_5 = wx.FlexGridSizer(3, 1, 0, 0)
         sizer_3 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.HORIZONTAL)
         grid_sizer_2 = wx.FlexGridSizer(2, 1, 0, 0)
         grid_sizer_4 = wx.FlexGridSizer(1, 4, 0, 0)
         grid_sizer_3 = wx.FlexGridSizer(2, 2, 0, 0)
+        sizer_1.Add(self.directories, 1, wx.EXPAND, 0)
         grid_sizer_3.Add(self.checkbox_album, 0, wx.ADJUST_MINSIZE, 0)
         grid_sizer_3.Add(self.label_album, 0, wx.ADJUST_MINSIZE, 0)
         grid_sizer_3.Add(self.checkbox_artist, 0, wx.ADJUST_MINSIZE, 0)
@@ -104,7 +110,7 @@ class CoverGrabberFrame(wx.Frame):
         sizer_1.Fit(self)
         sizer_1.SetSizeHints(self)
         sizer_1.AddGrowableRow(0)
-        sizer_1.AddGrowableCol(0)
+        sizer_1.AddGrowableCol(1)
         self.Layout()
         self.Centre()
         # end wxGlade
@@ -130,8 +136,24 @@ class CoverGrabberFrame(wx.Frame):
             self.bitmap_cover.SetBitmap(wx.BitmapFromImage(img))
 
     def selectCover(self, event): # wxGlade: CoverGrabberFrame.<event_handler>
-        print "Event handler `selectCover' not implemented"
-        event.Skip()
+        import urllib, os
+        import gnosis.xml.pickle
+        self._discmeta.amazonStore = self._store
+        selection = self._results[self.list_box_results.GetSelection()]
+        self._discmeta.amazonAsin = selection["asin"]
+        if selection["image"]:
+            jpg = urllib.urlopen(selection["image"]).read()
+            f = open(self._coverjpg, "wb")
+            f.write(jpg)
+            f.close()
+        
+        os.renames(self._discmetafile, self._discmetafile+".bak")
+
+        f = open(self._discmetafile, "w")
+        xml = gnosis.xml.pickle.dumps(self._discmeta)
+        f.write(xml)
+        f.close()
+        self.frame_statusbar.SetStatusText("Saved %s" % self._discmetafile)
 
     def __populateList(self, results):
         self._store = results[0]
@@ -142,6 +164,34 @@ class CoverGrabberFrame(wx.Frame):
             if result["image"]:
                 name = "[COVER] %s" % name
             self.list_box_results.Append(name)
+
+    def loadMetadata(self, directory):
+        import os
+        import gnosis.xml.pickle
+        self._discmetafile = os.path.join(directory, 'discmetadata.xml')
+        try:
+            self._coverjpg = os.path.join(directory, 'cover.jpg')
+            f = open(self._discmetafile, 'r')
+            self._discmeta = gnosis.xml.pickle.loads(f.read())
+            f.close()
+            
+            self.label_artist.SetLabel(self._discmeta.artist)
+            self.label_album.SetLabel(self._discmeta.title)
+            self.checkbox_album.SetValue(True)
+            self.checkbox_artist.SetValue(self._discmeta.artist <> "Various Artists")
+            self.__buildSearchString(None)
+            self.frame_statusbar.SetStatusText("Loaded %s" % self._discmetafile)
+        except:
+            self.frame_statusbar.SetStatusText("Couldn't open discmetadata.xml")
+            raise
+
+    def __buildSearchString(self, event): # wxGlade: CoverGrabberFrame.<event_handler>
+        string = ""
+        if self.checkbox_artist.GetValue():
+            string = " ".join([string, self._discmeta.artist])
+        if self.checkbox_album.GetValue():
+            string = " ".join([string, self._discmeta.title])
+        self.text_ctrl_search.SetValue(string)
 
 # end of class CoverGrabberFrame
 
