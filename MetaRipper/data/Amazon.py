@@ -22,6 +22,27 @@ def getAmazonInfoByUPC(barcode):
 
     return None
             
+def getAmazonInfoByString(string, store="us"):
+    results = []
+
+    try:
+        res = amazon.searchByKeyword(string, locale=store, product_line="music")
+    except:
+        print "Amazon search failed"
+        return None
+    
+    for result in res:
+        resultdict = {}
+        resultdict["asin"] = result.Asin
+        resultdict["image"] = getBestImage([result.ImageUrlLarge,
+                                            result.ImageUrlMedium,
+                                            result.ImageUrlSmall])
+        resultdict["name"] = "%s - %s" % (result.Artists.Artist, result.ProductName)
+        print resultdict
+        results.append(resultdict)
+        
+    return (store, results)
+            
 
 def getBestImage(imageUrls):
     for url in imageUrls:
@@ -49,7 +70,6 @@ def getsizes(uri):
             break
     file.close()
     return size, None
-    
     
     
 if __name__ == "__main__":
@@ -92,4 +112,4 @@ if __name__ == "__main__":
                     xml = gnosis.xml.pickle.dumps(discmeta)
                     f.write(xml)
                     f.close()
-                    
+
