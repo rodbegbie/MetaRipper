@@ -38,7 +38,7 @@ def convert(flacfile, mp3file):
 if __name__ == "__main__":
     import gnosis.xml.pickle    
     tag = Tag()
-    for root, dirs, files in walk("/home/rod/flac", followlinks=True):
+    for root, dirs, files in walk("/mnt/flac", followlinks=True):
         mp3dir = root.replace("/flac/", "/mp3/")
         if not os.path.exists(mp3dir):
             os.makedirs(mp3dir)
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                 conv = True
                 if os.path.exists(mp3file):
                     print "%s already there" % mp3file
-                    if os.path.getmtime(flacfile) < os.path.getmtime(mp3file):
+                    if os.path.getmtime(flacfile) <= os.path.getmtime(mp3file):
                         conv = False
                 
                 if conv:

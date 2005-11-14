@@ -39,6 +39,7 @@ def searchMbForDisc(device):
     
 def searchMbByDiscId(discId):
     mb = musicbrainz.mb()
+    mb.SetServer("192.168.77.171",80)
     mb.SetDepth(4)
 
     logging.info("querying musicbrainz.org to see if this cd is on there...")

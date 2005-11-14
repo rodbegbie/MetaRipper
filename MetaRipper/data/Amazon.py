@@ -75,7 +75,7 @@ def getsizes(uri):
 if __name__ == "__main__":
     import os
     import gnosis.xml.pickle
-    for root, dirs, files in os.walk("/home/rod/flac"):
+    for root, dirs, files in os.walk("/mnt/flac"):
         discmetafile = os.path.join(root, "discmetadata.xml")
         coverjpg = os.path.join(root, "cover.jpg")
 

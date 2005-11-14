@@ -7,7 +7,7 @@ class GrabberDirCtrl(pydirctrl.PyDirCtrl):
     menuRefreshId = wx.NewId()
 
     def __init__(self, parent, id):
-        pydirctrl.PyDirCtrl.__init__(self, parent, id, initialDir="/home/rod/flac")
+        pydirctrl.PyDirCtrl.__init__(self, parent, id, initialDir="/mnt/flac")
         self.frame = parent
         self.id = id
 

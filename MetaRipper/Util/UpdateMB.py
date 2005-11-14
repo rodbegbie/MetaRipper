@@ -5,7 +5,7 @@ from Util import walk
 
 if __name__ == "__main__":
     import gnosis.xml.pickle    
-    for root, dirs, files in walk("/home/rod/flac", followlinks=True):
+    for root, dirs, files in walk("/mnt/flac", followlinks=True):
         discmetafile = os.path.join(root, "discmetadata.xml")
 
         if os.path.exists(discmetafile):
