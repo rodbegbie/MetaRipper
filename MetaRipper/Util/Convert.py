@@ -3,6 +3,7 @@ import os,sys
 from eyeD3 import Tag, FrameHeader, TextFrame
 from data.MusicBrainz import *
 from Util import walk
+from time import sleep
 
 def error_cb(bin, element, error, debug):
     print error
@@ -110,7 +111,12 @@ if __name__ == "__main__":
                     tag.link(mp3file)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
-                    tag.update()
+                    try:
+                        tag.update()
+                    except:
+                        print "FAILED first time -- trying again"
+                        sleep(0.5)
+                        tag.update()
                     
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
@@ -122,9 +128,19 @@ if __name__ == "__main__":
 
                     # Also update the TRCK to be in x/y format
                     tag.frames["TRCK"][0].text = "%d/%d" % (trackNum, len(discMeta.tracks))
-                    tag.update()
+                    try:
+                        tag.update()
+                    except:
+                        print "FAILED first time -- trying again"
+                        sleep(0.5)
+                        tag.update()
                     
                 if discMeta.releaseDate and not tag.getDate():
                     print "Setting release year"
                     tag.setDate(discMeta.releaseDate)
-                    tag.update()
+                    try:
+                        tag.update()
+                    except:
+                        print "FAILED first time -- trying again"
+                        sleep(0.5)
+                        tag.update()
