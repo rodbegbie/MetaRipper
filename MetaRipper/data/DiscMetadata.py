@@ -19,6 +19,7 @@ class DiscMetadata(XML_Pickler):
         self.country = ""
         self.amazonStore = ""
         self.amazonAsin = ""
+        self.genre = ""
         self.ripTime = None
         self.lastUpdateDate = None
         self.tracks = []

@@ -109,17 +109,19 @@ if __name__ == "__main__":
                         
                 if cover and not gotCover:
                     tag.link(mp3file)
+                    sleep(1.0)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
                     try:
                         tag.update()
                     except:
                         print "FAILED first time -- trying again"
-                        sleep(0.5)
+                        sleep(1.0)
                         tag.update()
                     
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
+                    sleep(1.0)
                     tposHeader = FrameHeader(tag.header)
                     tposHeader.id = "TPOS"
                     tpos = TextFrame(tposHeader)
@@ -132,15 +134,28 @@ if __name__ == "__main__":
                         tag.update()
                     except:
                         print "FAILED first time -- trying again"
-                        sleep(0.5)
+                        sleep(1.0)
                         tag.update()
                     
                 if discMeta.releaseDate and not tag.getDate():
                     print "Setting release year"
+                    sleep(1.0)
                     tag.setDate(discMeta.releaseDate)
                     try:
                         tag.update()
                     except:
                         print "FAILED first time -- trying again"
-                        sleep(0.5)
+                        sleep(1.0)
                         tag.update()
+
+                if hasattr(discMeta, "genre") and discMeta.genre and not tag.getGenre():
+                    print "Setting genre"
+                    sleep(1.0)
+                    tag.setGenre(discMeta.genre)
+                    try:
+                        tag.update()
+                    except:
+                        print "FAILED first time -- trying again"
+                        sleep(1.0)
+                        tag.update()
+                        
