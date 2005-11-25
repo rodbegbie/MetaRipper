@@ -86,11 +86,14 @@ if __name__ == "__main__":
                     if frame.header.id == 'UFID':
                         gotMB = True
                         break
-
+		# destroy old instance of tag	
+		tag = None
+		
                 if not gotMB:
                     try:
                         print "Adding MB info to MP3 ID3 tags"
                         writeTags(mp3file, discMeta, trackNum)
+			sleep(2.0)
                     except:
                         print "failed doing the tagwriting thing:",  sys.exc_info()[0]
                 
@@ -100,6 +103,7 @@ if __name__ == "__main__":
                 gotCover = False
                 gotTPOS = False
                 gotTYER = False
+		needsUpdate = False
                 
                 for frame in tag.frames:
                     if frame.header.id == 'APIC':
@@ -112,12 +116,7 @@ if __name__ == "__main__":
                     sleep(1.0)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
-                    try:
-                        tag.update()
-                    except:
-                        print "FAILED first time -- trying again"
-                        sleep(1.0)
-                        tag.update()
+		    needsUpdate = True
                     
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
@@ -130,32 +129,24 @@ if __name__ == "__main__":
 
                     # Also update the TRCK to be in x/y format
                     tag.frames["TRCK"][0].text = "%d/%d" % (trackNum, len(discMeta.tracks))
-                    try:
-                        tag.update()
-                    except:
-                        print "FAILED first time -- trying again"
-                        sleep(1.0)
-                        tag.update()
+		    needsUpdate = True
                     
                 if discMeta.releaseDate and not tag.getDate():
                     print "Setting release year"
                     sleep(1.0)
                     tag.setDate(discMeta.releaseDate)
-                    try:
-                        tag.update()
-                    except:
-                        print "FAILED first time -- trying again"
-                        sleep(1.0)
-                        tag.update()
+		    needsUpdate = True
 
                 if hasattr(discMeta, "genre") and discMeta.genre and not tag.getGenre():
                     print "Setting genre"
                     sleep(1.0)
                     tag.setGenre(discMeta.genre)
+		    needsUpdate = True
+                        
+		if needsUpdate:
                     try:
                         tag.update()
                     except:
                         print "FAILED first time -- trying again"
                         sleep(1.0)
                         tag.update()
-                        

@@ -45,7 +45,7 @@ if __name__ == "__main__":
             f.close()
             
             print "\n---------------------"
-            print "%s - %s" % (discmeta.artist, discmeta.title)
+            print ("%s - %s" % (discmeta.artist, discmeta.title)).encode("ascii", "ignore")
             
             if hasattr(discmeta, "genre") and discmeta.genre:
                 print u"Already have genre"
