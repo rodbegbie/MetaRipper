@@ -86,17 +86,15 @@ if __name__ == "__main__":
                     if frame.header.id == 'UFID':
                         gotMB = True
                         break
-		# destroy old instance of tag	
-		tag = None
 		
                 if not gotMB:
                     try:
                         print "Adding MB info to MP3 ID3 tags"
                         writeTags(mp3file, discMeta, trackNum)
-			sleep(2.0)
+			#sleep(3.0)
+			continue
                     except:
                         print "failed doing the tagwriting thing:",  sys.exc_info()[0]
-                
                 # Reload the tags now that TunePimp's done its stuff
                 tag = Tag()
                 tag.link(mp3file)
@@ -113,14 +111,12 @@ if __name__ == "__main__":
                         
                 if cover and not gotCover:
                     tag.link(mp3file)
-                    sleep(1.0)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
 		    needsUpdate = True
                     
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
-                    sleep(1.0)
                     tposHeader = FrameHeader(tag.header)
                     tposHeader.id = "TPOS"
                     tpos = TextFrame(tposHeader)
@@ -133,13 +129,11 @@ if __name__ == "__main__":
                     
                 if discMeta.releaseDate and not tag.getDate():
                     print "Setting release year"
-                    sleep(1.0)
                     tag.setDate(discMeta.releaseDate)
 		    needsUpdate = True
 
                 if hasattr(discMeta, "genre") and discMeta.genre and not tag.getGenre():
                     print "Setting genre"
-                    sleep(1.0)
                     tag.setGenre(discMeta.genre)
 		    needsUpdate = True
                         
