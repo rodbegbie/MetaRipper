@@ -15,12 +15,21 @@ def getArtistTopTag(artistName, mbArtistId):
         sleep(0.5)
         data = urllib.urlopen(url).read()
         xml = ET.fromstring(data)
+	retval = None
 #        print ET.tostring(xml)
 #        print "Is this it?  %s" % xml.find("tag/name").text
-        tag = xml.find("tag/name")
-        if tag <> None:
-            return tag.text.lower()
-        return None
+	MAX_TAGS=5
+        tags = xml.findall("tag/name")
+	if len(tags) == 0:
+	    return None
+
+	if len(tags) > MAX_TAGS:
+	    tags = tags[:MAX_TAGS]
+        
+	tags = [tag.text.lower() for tag in tags]
+	tags.sort()
+        
+	return "/".join(tags)
     except:
         print "EXCEPTION!!!!!!!!"
         import traceback,sys
