@@ -231,7 +231,10 @@ class wxMainFrame(wx.Frame):
             filename = makeTrackFilename(self._path, self.discMeta, trackNum)
             logging.info("Ripping to %s" % filename)
             ripTrack(self._device, trackNum, filename, self._ripProgress, self._ripComplete)
-            writeTags(filename, self.discMeta, trackNum)
+	    try:
+                writeTags(filename, self.discMeta, trackNum)
+	    except:
+	        print "WRITING TAGS FAILED"
         # Dump XML
         xml = self.discMeta.dumps()
         f = open(os.path.join(self._path, "discmetadata.xml"), "w")
