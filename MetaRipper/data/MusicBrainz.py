@@ -39,7 +39,7 @@ def searchMbForDisc(device):
     
 def searchMbByDiscId(discId):
     mb = musicbrainz.mb()
-    mb.SetServer("192.168.77.171",80)
+    mb.SetServer("192.168.77.172",80)
     mb.SetDepth(4)
 
     logging.info("querying musicbrainz.org to see if this cd is on there...")
@@ -63,14 +63,14 @@ def getDiscNames(mb, numDiscs):
     return names
 
 def createDiscMetadata(mb, disc, cdid, numTracks, toc):
-    discMeta = DiscMetadata()            
+    discMeta = DiscMetadata()     
     mb.Select1(q.MBS_SelectAlbum, disc)            
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1 + ((disc-1) * numTracks))
-        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1 + ((disc-1) * numTracks))
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)# + ((disc-1) * numTracks))
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)# + ((disc-1) * numTracks))
         va = False
     else:
         artist = "Various Artists"
@@ -112,7 +112,7 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.releaseDate = releaseYear
     
     logging.info("\t%s / %s" % (artist, album))
-    for ii in range(1 + ((disc-1) * numTracks), mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
+    for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
         if va:
             artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
@@ -264,4 +264,15 @@ def writeTags(filename, discMeta, trackNum):
     tr.unlock()                   
     tp.releaseTrack(tr);
     tp.writeTags([fileId],)
+    noti = tp.getNotification()
+    from time import sleep
+    i = 0
+    while noti[1] <> 3:
+    	i = i + 1
+	if i == 200:
+	    raise "Taking too long to save"
+	if noti[0] <> 0:
+	    print noti
+    	sleep(0.1)
+	noti = tp.getNotification()
     
