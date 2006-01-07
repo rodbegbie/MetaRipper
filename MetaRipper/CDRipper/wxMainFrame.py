@@ -9,6 +9,7 @@ import wx.grid
 from data.DiscMetadata import *
 from data.MusicBrainz import *
 from data.Amazon import getAmazonInfoByUPC
+from data.AudioScrobbler import getArtistTopTag
 from Util.RipTrack import ripTrack
 import logging, threading, webbrowser,urllib
 from time import sleep, localtime
@@ -33,6 +34,8 @@ class wxMainFrame(wx.Frame):
         self.label_cdArtist = wx.StaticText(self.panel_info, -1, "label_4")
         self.label_7 = wx.StaticText(self.panel_info, -1, "Release Year:")
         self.label_year = wx.StaticText(self.panel_info, -1, "label_12")
+        self.label_70 = wx.StaticText(self.panel_info, -1, "Tags:")
+        self.label_genre = wx.StaticText(self.panel_info, -1, "/////")
         self.label_5 = wx.StaticText(self.panel_info, -1, "MB Disc ID:")
         self.button_mbdisc = wx.Button(self.panel_info, -1, "mbDiscId", style=wx.BU_LEFT)
         self.label_6 = wx.StaticText(self.panel_info, -1, "Amazon ASIN:")
@@ -96,7 +99,7 @@ class wxMainFrame(wx.Frame):
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         grid_sizer_2 = wx.FlexGridSizer(2, 2, 0, 0)
         sizer_3 = wx.StaticBoxSizer(self.sizer_3_staticbox, wx.HORIZONTAL)
-        grid_sizer_3 = wx.FlexGridSizer(7, 2, 0, 0)
+        grid_sizer_3 = wx.FlexGridSizer(8, 2, 0, 0)
         grid_sizer_4 = wx.FlexGridSizer(1, 3, 0, 5)
         grid_sizer_3.Add(self.label_1, 0, wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_cdTitle, 0, wx.FIXED_MINSIZE, 0)
@@ -104,6 +107,8 @@ class wxMainFrame(wx.Frame):
         grid_sizer_3.Add(self.label_cdArtist, 0, wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_7, 0, wx.ADJUST_MINSIZE, 0)
         grid_sizer_3.Add(self.label_year, 0, wx.ADJUST_MINSIZE, 0)
+        grid_sizer_3.Add(self.label_70, 0, wx.ADJUST_MINSIZE, 0)
+        grid_sizer_3.Add(self.label_genre, 0, wx.ADJUST_MINSIZE, 0)
         grid_sizer_3.Add(self.label_5, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.button_mbdisc, 0, wx.EXPAND|wx.FIXED_MINSIZE, 0)
         grid_sizer_3.Add(self.label_6, 0, wx.ALIGN_CENTER_VERTICAL|wx.FIXED_MINSIZE, 0)
@@ -127,7 +132,7 @@ class wxMainFrame(wx.Frame):
         grid_sizer_3.SetSizeHints(self.panel_info)
         grid_sizer_3.AddGrowableCol(1)
         grid_sizer_1.Add(self.panel_info, 1, wx.EXPAND, 0)
-        sizer_3.Add(self.grid_tracks, 1, wx.ALL|wx.EXPAND|wx.ADJUST_MINSIZE, 5)
+        sizer_3.Add(self.grid_tracks, 1, wx.ALL|wx.EXPAND, 5)
         self.panel_tracks.SetAutoLayout(True)
         self.panel_tracks.SetSizer(sizer_3)
         grid_sizer_1.Add(self.panel_tracks, 1, wx.EXPAND, 0)
@@ -311,12 +316,17 @@ class wxMainFrame(wx.Frame):
                 self._eject()
             
         if discMeta:
+            discMeta.genre = getArtistTopTag(discMeta.artist, discMeta.mbArtistId)
             wx.CallAfter(self.updateDisplay, discMeta)
     
     def updateDisplay(self, discMeta):
         self.discMeta = discMeta
         self._setInfoLabel(self.label_cdTitle, discMeta.title)
         self._setInfoLabel(self.label_cdArtist, discMeta.artist)
+        if discMeta.genre:
+            self._setInfoLabel(self.label_genre, discMeta.genre)
+        else:
+            self._setInfoLabel(self.label_genre, "None")
         self._setInfoLabel(self.button_mbdisc, discMeta.mbAlbumId)
         self._setInfoLabel(self.label_year, str(discMeta.releaseDate))
         self.text_ctrl_discNum.SetValue(str(discMeta.discNumber[0]))

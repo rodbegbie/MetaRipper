@@ -28,7 +28,7 @@
                                 <style>wxTAB_TRAVERSAL</style>
                                 <object class="wxFlexGridSizer" name="grid_sizer_3" base="EditFlexGridSizer">
                                     <hgap>0</hgap>
-                                    <rows>7</rows>
+                                    <rows>8</rows>
                                     <growable_cols>1</growable_cols>
                                     <cols>2</cols>
                                     <vgap>0</vgap>
@@ -84,6 +84,24 @@
                                         <object class="wxStaticText" name="label_year" base="EditStaticText">
                                             <attribute>1</attribute>
                                             <label>label_12</label>
+                                        </object>
+                                    </object>
+                                    <object class="sizeritem">
+                                        <flag>wxADJUST_MINSIZE</flag>
+                                        <border>0</border>
+                                        <option>0</option>
+                                        <object class="wxStaticText" name="label_70" base="EditStaticText">
+                                            <attribute>1</attribute>
+                                            <label>Tags:</label>
+                                        </object>
+                                    </object>
+                                    <object class="sizeritem">
+                                        <flag>wxADJUST_MINSIZE</flag>
+                                        <border>0</border>
+                                        <option>0</option>
+                                        <object class="wxStaticText" name="label_genre" base="EditStaticText">
+                                            <attribute>1</attribute>
+                                            <label>/////</label>
                                         </object>
                                     </object>
                                     <object class="sizeritem">
