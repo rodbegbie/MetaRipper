@@ -39,7 +39,7 @@ def searchMbForDisc(device):
     
 def searchMbByDiscId(discId):
     mb = musicbrainz.mb()
-    mb.SetServer("192.168.77.172",80)
+    mb.SetServer("192.168.77.171",80)
     mb.SetDepth(4)
 
     logging.info("querying musicbrainz.org to see if this cd is on there...")
@@ -69,13 +69,12 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)# + ((disc-1) * numTracks))
-        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)# + ((disc-1) * numTracks))
-        va = False
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
     else:
         artist = "Various Artists"
         artistSort = "Various Artists"
-        va = True
+        discMeta.variousArtists = True
 
     releaseYear = None
     
@@ -111,13 +110,13 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.discNumber = (discNum, discNum)
     discMeta.releaseDate = releaseYear
     
+    lastArtist = None
     logging.info("\t%s / %s" % (artist, album))
     for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
-        if va:
-            artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
-            artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
-            artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
+        artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
         dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
         trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
         trackId = mb.GetIDFromURL(trackURI)
@@ -125,6 +124,9 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
         trackMeta = TrackMetadata()
         trackMeta.title = name
         trackMeta.artist = artist
+        if lastArtist and artist <> lastArtist:
+            discMeta.variousArtists = True
+        lastArtist = artist
         trackMeta.artistSort = artistSort
         trackMeta.number = track
         trackMeta.length = int(dura)
@@ -160,15 +162,16 @@ def updateDiscMetadata(mb, discMeta):
     except musicbrainz.MusicBrainzError:
         print "error getting date"
         
+    if not hasattr(discMeta, "variousArtists"):
+        discMeta.variousArtists = False
     
     if artId != q.MBI_VARIOUS_ARTIST_ID:
         artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
         artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
-        va = False
     else:
         artist = "Various Artists"
         artistSort = "Various Artists"
-        va = True
+        discMeta.variousArtists = True
 
     discchanges = False
     dirchange = False
@@ -193,17 +196,20 @@ def updateDiscMetadata(mb, discMeta):
             dirchange = dirchange or needsrenaming
     
     anytrackchanges = False
-    
+    lastArtist = None
     for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, 1) + 1):
         name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
-        if va:
-            artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
-            artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
-            artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
+        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
+        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
+        artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
         dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
         trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
         trackId = mb.GetIDFromURL(trackURI)
         track = mb.GetOrdinalFromList(q.MBE_AlbumGetTrackList, trackURI)
+
+        if lastArtist and artist <> lastArtist:
+            discMeta.variousArtists = True
+        lastArtist = artist
 
         trackMeta = discMeta.tracks[ii-1]
         if not hasattr(trackMeta, "artistSort"):
@@ -221,7 +227,7 @@ def updateDiscMetadata(mb, discMeta):
         for (trackpiecename, newpiece) in pieces:
             trackpiece = getattr(trackMeta, trackpiecename)
             if trackpiece <> newpiece:
-                print "Changing %s to %s" % (trackpiece, newpiece)
+                print "Changing %s - %s to %s" % (trackpiecename, trackpiece, newpiece)
                 setattr(trackMeta, trackpiecename, newpiece)
                 thistrackchanges = True
         

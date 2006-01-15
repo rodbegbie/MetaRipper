@@ -8,6 +8,7 @@ class DiscMetadata(XML_Pickler):
         self.title = ""
         self.artist = ""
         self.artistSort = ""
+        self.variousArtists = False
         self.toc = []
         self.mbAlbumId = ""
         self.mbDiscId = ""
@@ -69,7 +70,7 @@ def makePath(discmeta, overwrite=False, append=False):
     
 def makeTrackFilename(path, discmeta, trackNum):
     track = discmeta.tracks[trackNum-1]
-    if discmeta.artist == "Various Artists":
+    if discmeta.variousArtists:
         filename = "%02d-%s-%s.flac" % (trackNum, _makeSafe(track.artist), _makeSafe(track.title))
     else:
         filename = "%02d-%s.flac" % (trackNum, _makeSafe(track.title))

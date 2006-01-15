@@ -16,6 +16,8 @@ if __name__ == "__main__":
         else:
             continue
             
+        print "\n\n======================================"
+        print ("Checking %s - %s" % (discmeta.artist, discmeta.title)).encode("ascii", "ignore")
         mb = searchMbByDiscId(discmeta.mbAlbumId)
         
         if not mb:
@@ -25,6 +27,7 @@ if __name__ == "__main__":
         (newDiscMeta, dirchange) = updateDiscMetadata(mb, discmeta)
         
         if not newDiscMeta:
+            print "OK"
             continue
         else:
             print "ALBUM NEEDS UPDATERING!"
