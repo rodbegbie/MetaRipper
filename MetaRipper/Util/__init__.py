@@ -15,6 +15,9 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
             dirs.append(name)
         else:
             nondirs.append(name)
+    
+    dirs.sort()
+    nondirs.sort()
 
     if topdown:
         yield top, dirs, nondirs
