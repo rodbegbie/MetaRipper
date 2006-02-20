@@ -39,7 +39,7 @@ def searchMbForDisc(device):
     
 def searchMbByDiscId(discId):
     mb = musicbrainz.mb()
-    mb.SetServer("192.168.77.171",80)
+    mb.SetServer("mbserver",80)
     mb.SetDepth(4)
 
     logging.info("querying musicbrainz.org to see if this cd is on there...")
@@ -69,8 +69,8 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
-        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
+        artist = mb.GetResultData(q.MBE_TrackGetArtistName)
+        artistSort = mb.GetResultData(q.MBE_TrackGetArtistSortName)
     else:
         artist = "Various Artists"
         artistSort = "Various Artists"
@@ -166,8 +166,8 @@ def updateDiscMetadata(mb, discMeta):
         discMeta.variousArtists = False
     
     if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, 1)
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, 1)
+        artistSort = mb.GetResultData(q.MBE_TrackGetArtistSortName)
+        artist = mb.GetResultData(q.MBE_TrackGetArtistName)
     else:
         artist = "Various Artists"
         artistSort = "Various Artists"
