@@ -49,16 +49,6 @@ if __name__ == "__main__":
         else:
             newpath = root
 
-        print "Saving new metadata file"
-        newdiscmetafile = makeMetadataFilename(newpath, "discmetadata.xml")
-        if os.path.exists(discmetafile+".bak"):
-            os.unlink(discmetafile+".bak")
-        os.renames(discmetafile, newdiscmetafile+".bak")
-        f = open(newdiscmetafile, "w")
-        xml = gnosis.xml.pickle.dumps(discmeta)
-        f.write(xml)
-        f.close()        
-        
         for file in files:
             if file.endswith(".flac"):
                 trackNum = int(file[0:2])
@@ -70,8 +60,11 @@ if __name__ == "__main__":
                 if flacfile <> newflacfile:
                     print "Moving %s to %s" % (flacfile, newflacfile)
                     os.renames(flacfile, newflacfile)
-                
-                writeTags(newflacfile, discmeta, trackNum)
+               
+	        try:
+                    writeTags(newflacfile, discmeta, trackNum)
+		except:
+		    print "failed doing the tagwriting thing:", sys.exc_info()[0]
 
                 if os.path.exists(mp3file):
                     try:
@@ -82,5 +75,15 @@ if __name__ == "__main__":
                     if mp3file <> newmp3file:
                         print "Moving MP3 file %s" % mp3file
                         os.renames(mp3file, newmp3file)
+        
+	print "Saving new metadata file"
+        newdiscmetafile = makeMetadataFilename(newpath, "discmetadata.xml")
+        if os.path.exists(discmetafile+".bak"):
+            os.unlink(discmetafile+".bak")
+        os.renames(discmetafile, newdiscmetafile+".bak")
+        f = open(newdiscmetafile, "w")
+        xml = gnosis.xml.pickle.dumps(discmeta)
+        f.write(xml)
+        f.close()        
                 
     print "**** ALL DONE! ****"
