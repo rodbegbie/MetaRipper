@@ -1,7 +1,8 @@
 #!/usr/bin/python
-import os,re
+import os
+from Util import walk
 
-for root, dirs, files in os.walk("/mnt/flac"):
+for root, dirs, files in walk("/mnt/flac"):
 	if not os.path.exists(os.path.join(root, 'cover.jpg')):
 		if (os.path.split(root))[0] <> '/mnt/flac':
 			print root
