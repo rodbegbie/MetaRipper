@@ -80,6 +80,9 @@ if __name__ == "__main__":
             if file.endswith(".flac"):
                 flacfile = os.path.join(root,file)
                 mp3file = flacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
+                if len(mp3file) > 150:
+                    print "SHORTENING ", mp3file
+                    mp3file = mp3file[:146] + ".mp3"
                 conv = True
                 if os.path.exists(mp3file):
                     print "%s already there" % mp3file
