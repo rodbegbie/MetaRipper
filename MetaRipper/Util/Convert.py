@@ -86,10 +86,10 @@ if __name__ == "__main__":
                 conv = True
                 if os.path.exists(mp3file):
                     print "%s already there" % mp3file
-                    if os.path.getmtime(mp3file) > metaUpdateTime:
-                        continue
-                    if os.path.getmtime(flacfile) <= os.path.getmtime(mp3file):
-                        conv = False
+                #    if os.path.getmtime(mp3file) > metaUpdateTime:
+                #        continue
+                    #if os.path.getmtime(flacfile) <= os.path.getmtime(mp3file):
+                    conv = False
                 
                 if conv:
                     convert(flacfile,mp3file)
@@ -117,6 +117,7 @@ if __name__ == "__main__":
                 gotCover = False
                 gotTPOS = False
                 gotTYER = False
+		gotTPE2 = False
                 needsUpdate = False
                 
                 for frame in tag.frames:
@@ -124,12 +125,23 @@ if __name__ == "__main__":
                         gotCover = True
                     if frame.header.id == 'TPOS':
                         gotTPOS = True
+                    if frame.header.id == 'TPE2':
+                        gotTPE2 = True
                         
                 if cover and not gotCover:
                     tag.link(mp3file)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
                     needsUpdate = True
+                    
+                if not gotTPE2:
+                    print "Updating TPE2 fields"
+                    tpe2Header = FrameHeader(tag.header)
+                    tpe2Header.id = "TPE2"
+                    tpe2 = TextFrame(tpe2Header)
+                    tpe2.text = discMeta.artist
+                    tag.frames.append(tpe2)
+		    needsUpdate = True
                     
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
