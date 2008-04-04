@@ -3,20 +3,20 @@ import urllib
 import ImageFile
 from data.DiscMetadata import DiscMetadata
 
-amazon.setLicense("1AGTVVHBTYPBQKT7G482")
+amazon.setLicenseKey("1AGTVVHBTYPBQKT7G482")
 
 def getAmazonInfoByUPC(barcode):
     if barcode:
         try:
-            res = amazon.searchByUPC(barcode)
+            res = amazon.ItemLookup(ItemId=barcode, IdType="UPC", SearchIndex="Music", ResponseGroup="Medium")
         except:
             print "Amazon search failed"
             return None
             
-        asin = res[0].Asin
-        image = getBestImage([res[0].ImageUrlLarge,
-                              res[0].ImageUrlMedium,
-                              res[0].ImageUrlSmall])
+        asin = res[0].ASIN
+        image = getBestImage([res[0].LargeImage.URL,
+                              res[0].MediumImage.URL,
+                              res[0].SmallImage.URL])
         
         return ("us", asin, image)
 
