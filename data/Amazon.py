@@ -8,21 +8,21 @@ amazon.setSecretKey("RSDWQPUbS4wsvMBU33BkElMsCvrEpjje2iChPj6r")
 
 def getAmazonInfoByUPC(barcode):
     if barcode:
-        #try:
-        res = amazon.ItemLookup(ItemId=barcode, IdType="UPC", SearchIndex="Music", ResponseGroup="Medium")
-        #except:
-        #    print "Amazon search failed"
-        #    return None
-            
+        try:
+            res = amazon.ItemLookup(ItemId=barcode, IdType="UPC", SearchIndex="Music", ResponseGroup="Medium")
+        except:
+           print "Amazon search failed"
+           return None
+
         asin = res[0].ASIN
         image = getBestImage([getattr(res[0], x).URL for x in ("LargeImage", "MediumImage", "SmallImage") if hasattr(res[0], x)]) #res[0].LargeImage.URL,
 #                              res[0].MediumImage.URL,
 #                              res[0].SmallImage.URL])
-        
+
         return ("us", asin, image)
 
     return None
-            
+
 def getAmazonInfoByString(string, store="us"):
     results = []
 
@@ -31,7 +31,7 @@ def getAmazonInfoByString(string, store="us"):
     except:
         print "Amazon search failed"
         return None
-    
+
     for result in res:
         resultdict = {}
         resultdict["asin"] = result.Asin
@@ -41,9 +41,9 @@ def getAmazonInfoByString(string, store="us"):
         resultdict["name"] = "%s - %s" % (result.Artists.Artist, result.ProductName)
         print resultdict
         results.append(resultdict)
-        
+
     return (store, results)
-            
+
 
 def getBestImage(imageUrls):
     for url in imageUrls:
@@ -51,9 +51,9 @@ def getBestImage(imageUrls):
         if sizes[1]:
             if sizes[1] <> (1,1):
                 return url
-    
+
     return None
-        
+
 
 def getsizes(uri):
     # get file size *and* image size (None if not known)
@@ -71,8 +71,8 @@ def getsizes(uri):
             break
     file.close()
     return size, None
-    
-    
+
+
 if __name__ == "__main__":
     import os
     import gnosis.xml.pickle
@@ -87,7 +87,7 @@ if __name__ == "__main__":
             #print xml
             discmeta = gnosis.xml.pickle.loads(xml)
             f.close()
-            
+
             if discmeta.amazonAsin:
                 print u"Skipping %s:  Already have ASIN" % discmeta.title
             else:
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                         f.write(jpg)
                         f.close()
                         print "got cover jpg"
-                    
+
                     os.renames(discmetafile, discmetafile+".bak")
 
                     print "saving %s" % discmetafile

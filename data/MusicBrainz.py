@@ -1,7 +1,8 @@
 from DiscMetadata import DiscMetadata, TrackMetadata
 import logging
-import musicbrainz
-q = musicbrainz
+from musicbrainz2 import disc, model
+import musicbrainz2.webservice as ws
+from musicbrainz2.utils import extractUuid
 from tunepimp import tunepimp
 tp = tunepimp.tunepimp('MetaRipper', '0.0.1');
 
@@ -9,99 +10,72 @@ import re
 DISC_NUM_REGEX = re.compile(r".*\s+\([Dd]isc (\d+)")
 
 def searchMbForDisc(device):
-    mb = musicbrainz.mb()
-#    mb.SetServer("mbserver",80)
-    mb.SetDepth(2)
-    mb.SetDevice(device)
-
-    mb.Query(q.MBQ_GetCDTOC)
-    cdid = mb.GetResultData(q.MBE_TOCGetCDIndexId)        
-    numTracks = mb.GetResultInt(q.MBE_TOCGetLastTrack)
+    d = disc.readDisc(device)
+    cdid = d.id
+    numTracks = d.getLastTrackNum()
     toc = {}
     toc["first_track"] = 1
     toc["num_tracks"] = numTracks
-    toc["length"] = mb.GetResultInt1(q.MBE_TOCGetTrackSectorOffset, 1)
-    offsets = []
-    for ii in range (2, numTracks + 2):
-        trackOffset = mb.GetResultInt1(q.MBE_TOCGetTrackSectorOffset, ii)
-        offsets.append(trackOffset)
-    toc["offsets"] = offsets
+    toc["length"] = d.sectors
+    toc["offsets"] = [x for (x,y) in d.getTracks()]
     logging.debug("toc: %s" % str(toc))
-    
+
     logging.info("querying musicbrainz.org to see if this cd is on there...")
-    mb.QueryWithArgs(q.MBQ_GetCDInfoFromCDIndexId, [cdid])
-    
-    numFound = mb.GetResultInt(q.MBE_GetNumAlbums)
+    q = ws.Query()
+    rf = ws.ReleaseFilter(discId=cdid)
+    releases = [result.getRelease() for result in q.getReleases(rf)]
+
+    numFound = len(releases)
 
     if numFound == 0:
-        return (mb, toc, numFound, (mb.GetWebSubmitURL(),))
+        return (toc, numFound, (disc.getSubmissionUrl(d),), None)
     else:
-        return (mb, toc, numFound, (cdid, numTracks))
-    
-def searchMbByDiscId(discId):
-    mb = musicbrainz.mb()
-#    mb.SetServer("brainzvm", 80)
-    mb.SetServer("musicbrainz.org",80)
-    mb.SetDepth(4)
+        return (toc, numFound, (cdid, numTracks), releases)
 
-    logging.info("querying musicbrainz.org to see if this cd is on there...")
-    mb.QueryWithArgs(q.MBQ_GetAlbumById, [discId])
-    
-    numFound = mb.GetResultInt(q.MBE_GetNumAlbums)
+def searchMbByDiscId(discId):
+    q = ws.Query()
+    rf = ws.ReleaseFilter(discId=cdid)
+    releases = [result.getRelease() for result in q.getReleases(rf)]
+
+    numFound = len(releases)
 
     if numFound == 0:
         print "*** DISC ID NO LONGER VALID ***"
         return None
     else:
-        return mb
-    
-def getDiscNames(mb, numDiscs):
-    names = []
-    for i in range (1, numDiscs + 1):
-        mb.Select1(q.MBS_SelectAlbum, i)
-        albumName = mb.GetResultData(q.MBE_AlbumGetAlbumName)
-        names.append(albumName)
-        mb.Select(q.MBS_Back);
+        return releases
+
+def getDiscNames(releases):
+    names = [release.title for release in releases]
     return names
 
-def createDiscMetadata(mb, disc, cdid, numTracks, toc):
-    discMeta = DiscMetadata()     
-    mb.Select1(q.MBS_SelectAlbum, disc)            
-    album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
-    albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
-    artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
-    if artId != q.MBI_VARIOUS_ARTIST_ID:
-        artist = mb.GetResultData(q.MBE_TrackGetArtistName)
-        artistSort = mb.GetResultData(q.MBE_TrackGetArtistSortName)
-    else:
-        artist = "Various Artists"
-        artistSort = "Various Artists"
-        discMeta.variousArtists = True
+def createDiscMetadata(release, cdid, numTracks, toc):
+    discMeta = DiscMetadata()
+
+    album = release.title
+    albid = extractUuid(release.id, 'release')
+    artId = extractUuid(release.artist.id, 'artist')
+
+    artist = release.artist.name
+    artistSort = release.artist.sortName
+    discMeta.variousArtists = (release.artist.id == model.VARIOUS_ARTISTS_ID)
 
     releaseYear = None
-    
-    try:
-        numReleases = mb.GetResultInt(q.MBE_AlbumGetNumReleaseDates)
-        for i in xrange(1, numReleases + 1):
-            mb.Select1(q.MBS_SelectReleaseDate, i)
-            releaseDate = mb.GetResultData(q.MBE_ReleaseGetDate)
-            releaseCountry = mb.GetResultData(q.MBE_ReleaseGetCountry)
-    
-            thisReleaseYear = int(releaseDate[0:4])
-            if releaseYear == None or thisReleaseYear < releaseYear:
-                releaseYear = thisReleaseYear
 
-            mb.Select(musicbrainz.MBS_Back)
+    for event in release.releaseEvents:
+        releaseDate = event.date
+        releaseCountry = event.country
 
-    except musicbrainz.MusicBrainzError:
-        print "error getting date"
+        thisReleaseYear = int(releaseDate[0:4])
+        if releaseYear == None or thisReleaseYear < releaseYear:
+            releaseYear = thisReleaseYear
 
     discNumMatches = DISC_NUM_REGEX.findall(album)
     if discNumMatches:
         discNum = int(discNumMatches[0][0])
     else:
         discNum = 1
-        
+
     discMeta.title = album
     discMeta.artist = artist
     discMeta.artistSort = artistSort
@@ -111,18 +85,19 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
     discMeta.mbArtistId = artId
     discMeta.discNumber = (discNum, discNum)
     discMeta.releaseDate = releaseYear
-    
+
     lastArtist = None
     logging.info("\t%s / %s" % (artist, album))
-    for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, disc) + 1):
-        name = mb.GetResultData1(q.MBE_AlbumGetTrackName, ii)
-        artist = mb.GetResultData1(q.MBE_AlbumGetArtistName, ii)
-        artistSort = mb.GetResultData1(q.MBE_AlbumGetArtistSortName, ii)
-        artId = mb.GetIDFromURL(mb.GetResultData1(q.MBE_AlbumGetArtistId, ii))
-        dura = mb.GetResultInt1(q.MBE_AlbumGetTrackDuration, ii)
-        trackURI = mb.GetResultData1(q.MBE_AlbumGetTrackId, ii)
-        trackId = mb.GetIDFromURL(trackURI)
-        track = mb.GetOrdinalFromList(q.MBE_AlbumGetTrackList, trackURI)
+    trackNum = 0
+    for track in release.tracks:
+        trackNum += 1
+        name = track.title
+        artist = track.artist.name if track.artist else artist
+        artistSort = track.artist.sortName if track.artist else artistSort
+        artId = extractUuid(track.artist.id, 'artist') if track.artist else artId
+        dura = track.duration if track.duration else 0
+        trackURI = track.id
+        trackId = extractUuid(trackURI, 'track')
         trackMeta = TrackMetadata()
         trackMeta.title = name
         trackMeta.artist = artist
@@ -130,24 +105,24 @@ def createDiscMetadata(mb, disc, cdid, numTracks, toc):
             discMeta.variousArtists = True
         lastArtist = artist
         trackMeta.artistSort = artistSort
-        trackMeta.number = track
-        trackMeta.length = int(dura)
+        trackMeta.number = trackNum
+        trackMeta.length = dura
         trackMeta.mbTrackId = trackId
         trackMeta.mbArtistId = artId
         discMeta.tracks.append(trackMeta)
         dura = "%d:%02d" % divmod(int(dura / 1000), 60)
-        
-        logging.info("\t%02d - %s - %s (%s)" % (track, artist, name, dura))
-                        
+
+        logging.info("\t%02d - %s - %s (%s)" % (trackNum, artist, name, dura))
+
     return discMeta
 
-def updateDiscMetadata(mb, discMeta):
-    mb.Select1(q.MBS_SelectAlbum, 1)            
+def updateDiscMetadata(discMeta):
+    mb.Select1(q.MBS_SelectAlbum, 1)
     album = mb.GetResultData(q.MBE_AlbumGetAlbumName)
     albid = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumId))
     artId = mb.GetIDFromURL(mb.GetResultData(q.MBE_AlbumGetAlbumArtistId))
     releaseYear = None
-    
+
     try:
         numReleases = mb.GetResultInt(q.MBE_AlbumGetNumReleaseDates)
         for i in xrange(1, numReleases + 1):
@@ -163,10 +138,10 @@ def updateDiscMetadata(mb, discMeta):
 
     except musicbrainz.MusicBrainzError:
         print "error getting date"
-        
+
     if not hasattr(discMeta, "variousArtists"):
         discMeta.variousArtists = False
-    
+
     if artId != q.MBI_VARIOUS_ARTIST_ID:
         artistSort = mb.GetResultData(q.MBE_TrackGetArtistSortName)
         artist = mb.GetResultData(q.MBE_TrackGetArtistName)
@@ -180,15 +155,15 @@ def updateDiscMetadata(mb, discMeta):
 
     if not hasattr(discMeta, "artistSort"):
         discMeta.artistSort = discMeta.artist
-    
-    pieces = [    
+
+    pieces = [
         ("title", album, True),
         ("artist", artist, False),
         ("artistSort", artistSort, True),
         ("mbArtistId", artId, False),
         ("releaseDate", releaseYear, False)
     ]
-    
+
     for (discpiecename, newpiece, needsrenaming) in pieces:
         discpiece = getattr(discMeta, discpiecename)
         if discpiece <> newpiece:
@@ -196,7 +171,7 @@ def updateDiscMetadata(mb, discMeta):
             setattr(discMeta, discpiecename, newpiece)
             discchanges = True
             dirchange = dirchange or needsrenaming
-    
+
     anytrackchanges = False
     lastArtist = None
     for ii in range(1, mb.GetResultInt1(q.MBE_AlbumGetNumTracks, 1) + 1):
@@ -216,7 +191,7 @@ def updateDiscMetadata(mb, discMeta):
         trackMeta = discMeta.tracks[ii-1]
         if not hasattr(trackMeta, "artistSort"):
             trackMeta.artistSort = trackMeta.artist
-        
+
         pieces = [
             ("title", name),
             ("artist", artist),
@@ -232,7 +207,7 @@ def updateDiscMetadata(mb, discMeta):
                 print "Changing %s - %s to %s" % (trackpiecename, trackpiece, newpiece)
                 setattr(trackMeta, trackpiecename, newpiece)
                 thistrackchanges = True
-        
+
         if thistrackchanges:
             discMeta.tracks[ii-1] = trackMeta
             anytrackchanges = True
@@ -251,16 +226,15 @@ def writeTags(filename, discMeta, trackNum):
     tp.setID3Encoding(tunepimp.eUTF8)
     fileId = tp.addFile(filename)
     tr = tp.getTrack(fileId);
-    print "HASCHANGED1", tr.hasChanged()
     tr.lock()
     mdata = tr.getServerMetadata()
     mdata.album = discMeta.title.encode("utf-8")
     mdata.albumId = discMeta.mbAlbumId
-    #mdata.albumArtistId = discMeta.mbArtistId
-    mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
+    # mdata.albumArtistId = discMeta.mbArtistId
+    mdata.variousArtist = discMeta.variousArtists
     if discMeta.releaseDate:
         mdata.releaseYear = discMeta.releaseDate
-   
+
     trackMeta = discMeta.tracks[trackNum-1]
     mdata.artist = trackMeta.artist.encode("utf-8")
     if hasattr(trackMeta, "artistSort"):
@@ -269,15 +243,11 @@ def writeTags(filename, discMeta, trackNum):
     mdata.track = trackMeta.title.encode("utf-8")
     mdata.trackId = trackMeta.mbTrackId
     mdata.trackNum = trackMeta.number
-    print "HASCHANGED2", tr.hasChanged()
     tr.setStatus(tunepimp.eRecognized)
     tr.setServerMetadata(mdata)
-    tr.unlock()                   
+    tr.unlock()
     tp.releaseTrack(tr);
-    print "HASCHANGED3", tr.hasChanged()
-    print "ERROR", tr.getTrackError()
     tp.writeTags([fileId],)
-    print "MDATA", mdata.album
     noti = tp.getNotification()
     from time import sleep
     i = 0
@@ -286,9 +256,6 @@ def writeTags(filename, discMeta, trackNum):
 	if i == 200:
 	    raise "Taking too long to save"
 	if noti[0] <> 0:
-	    print noti
-    	sleep(0.1)
-	noti = tp.getNotification()
-        print "ERROR", tr.getTrackError()
-        print "HASCHANGED4", tr.hasChanged()
-    
+        sleep(0.1)
+        noti = tp.getNotification()
+

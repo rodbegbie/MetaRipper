@@ -17,7 +17,7 @@ from time import sleep, localtime
 
 class wxMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        self._device=kwds.pop("device")        
+        self._device=kwds.pop("device")
         # begin wxGlade: wxMainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
@@ -175,11 +175,11 @@ class wxMainFrame(wx.Frame):
         wx.EVT_BUTTON(self, self.button_rip.GetId(), self.onRip)
         wx.EVT_BUTTON(self, self.button_exit.GetId(), self.onExit)
         wx.EVT_TEXT_ENTER(self, self.text_ctrl_barcode.GetId(), self.checkBarcode)
- 
+
     def _ripProgress(self, trackNo, pos, length):
 #        trackLength = float(self.discMeta.tracks[trackNo-1].length) / 1000
 #        trackPercent = 0
-        
+
         length = float(length)
         numTracks = float(len(self.discMeta.tracks))
         discPercent = ((trackNo-1) / numTracks) * 100
@@ -187,22 +187,22 @@ class wxMainFrame(wx.Frame):
         trackPercent = int((pos / length) * 100)
         #TODO: Fix this calculation to make it accurate
         discPercent = int(discPercent + (trackPercent/numTracks))
-            
+
         wx.CallAfter(self.gauge_track.SetValue, trackPercent)
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
         pass#wx.CallAfter(self.grid_tracks.ClearSelection)
-        
+
     def onMBDisc(self, event):
-        url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
+        url = "http://musicbrainz.org/release/%s" % self.discMeta.mbAlbumId
         webbrowser.open_new(url)
-    
+
     def onAmazon(self, event):
         if self.amazonASIN:
             url = "http://www.amazon.com/o/ASIN/%s/groovymother-20/ref=nosim/" % self.amazonASIN
             webbrowser.open_new(url)
-    
+
     def onRip(self, event):
         self.discMeta.barcode = self.text_ctrl_barcode.GetValue()
         self.discMeta.discNumber = (int(self.text_ctrl_discNum.GetValue()),
@@ -211,7 +211,7 @@ class wxMainFrame(wx.Frame):
         self.discMeta.amazonAsin = self.amazonASIN
         self.discMeta.amazonStore = self.amazonStore
         self.discMeta.ripTime = localtime()
-        
+
         self.button_refresh.Enable(False)
         self.button_rip.Enable(False)
         self.button_eject.Enable(False)
@@ -228,7 +228,7 @@ class wxMainFrame(wx.Frame):
 
         if self._path:
             threading.Thread(None, self._ripThread).start()
-        
+
     def _ripThread(self):
         #r = None
         r = Ripper()
@@ -243,15 +243,8 @@ class wxMainFrame(wx.Frame):
             r.ripTrack(trackNum, filename, self._ripProgress, self._ripComplete)
 
             filename = makeTrackFilename(self._path, self.discMeta, trackNum)
-            try:
-                print "WRITING TAGS"
-                writeTags(filename, self.discMeta, trackNum)
-            except:
-                try:
-                    print "TRYING TO WRITE TAGS AGAIN"
-                    writeTags(filename, self.discMeta, trackNum)
-                except:
-                    print "WRITING TAGS FAILED"
+            print "WRITING TAGS"
+            writeTags(filename, self.discMeta, trackNum)
 
         # Dump XML
         xml = self.discMeta.dumps()
@@ -268,10 +261,10 @@ class wxMainFrame(wx.Frame):
         self.button_refresh.Enable(True)
         self.button_eject.Enable(True)
         self._eject()
-        
+
     def onEject(self, event):
         self._eject()
-        
+
     def onExit(self, event):
         self.Close(True)
 
@@ -285,7 +278,7 @@ class wxMainFrame(wx.Frame):
                 self.choice_country.SetSelection(1)
             else:
                 self.choice_country.SetSelection(0)
-                
+
             res = getAmazonInfoByUPC(bc)
             if res:
                 self.amazonStore = res[0]
@@ -298,25 +291,26 @@ class wxMainFrame(wx.Frame):
     def onRefresh(self, event):
         discMeta = None
         self.amazonStore = self.amazonASIN = self.coverjpg = None
-        
+        self._setInfoLabel(self.button_amazon, "")
+
         self._ripping = False
-        (mb, toc, numFound, info) = searchMbForDisc(self._device)
+        (toc, numFound, info, releases) = searchMbForDisc(self._device)
         if numFound == 1:
             cdid = info[0]
             numTracks = info[1]
-            discMeta = createDiscMetadata(mb, 1, cdid, numTracks, toc)
+            discMeta = createDiscMetadata(releases[0], cdid, numTracks, toc)
         elif numFound > 1:
-            list = getDiscNames(mb, numFound)
+            list = getDiscNames(releases)
             pickDialog = wx.SingleChoiceDialog(self, "Pick one", "Multiple discs found", list)
             pickDialog.ShowModal()
             chosen = pickDialog.GetSelection()
             cdid = info[0]
             numTracks = info[1]
-            discMeta = createDiscMetadata(mb, chosen+1, cdid, numTracks, toc)
-        else:    
+            discMeta = createDiscMetadata(releases[chosen], cdid, numTracks, toc)
+        else:
             logging.info("CD Not Found")
             button = wx.MessageDialog(self,
-                                      "Add CD to MusicBrainz?", "CD Not Found", 
+                                      "Add CD to MusicBrainz?", "CD Not Found",
                                       wx.YES_NO | wx.YES_DEFAULT |
                                       wx.ICON_QUESTION).ShowModal()
 
@@ -327,11 +321,11 @@ class wxMainFrame(wx.Frame):
                     webbrowser.open_new(url)
             else:
                 self._eject()
-            
+
         if discMeta:
             discMeta.genre = getArtistTopTag(discMeta.artist, discMeta.mbArtistId)
             wx.CallAfter(self.updateDisplay, discMeta)
-    
+
     def updateDisplay(self, discMeta):
         self.discMeta = discMeta
         self._setInfoLabel(self.label_cdTitle, discMeta.title)
@@ -352,7 +346,7 @@ class wxMainFrame(wx.Frame):
             self.grid_tracks.SetCellValue(i, 1, trackMeta.artist)
             self.grid_tracks.SetCellValue(i, 2, "%d:%02d" % divmod(trackMeta.length / 1000, 60))
             i += 1
-            
+
         self.text_ctrl_barcode.SetValue("")
         self.text_ctrl_barcode.SetFocus()
         self.button_rip.Enable(True)
@@ -367,7 +361,7 @@ class wxMainFrame(wx.Frame):
         if text != label.GetLabel():
             label.SetLabel(text)
             self.panel_info.GetSizer().SetItemMinSize(label, label.GetBestSize())
-        
+
 # end of class wxMainFrame
 
 

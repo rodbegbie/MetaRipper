@@ -22,7 +22,7 @@ class Ripper:
         self.queue.set_property("max-size-time", 120 * gst.SECOND)
 
         self.flac = gst.element_factory_make("flacenc", "encoder")
-       
+
         self.sink = gst.element_factory_make("filesink", "sink")
 
         self.bin.add(self.cdp, self.queue, self.flac, self.sink)
@@ -36,20 +36,20 @@ class Ripper:
         self.sink.set_property("location", filename)
         self.cbC = callbackComplete
         self.tNo = trackNo
-    
+
         #bin.set_state(gst.STATE_PAUSED)
         #print "get_state", bin.get_state(gst.CLOCK_TIME_NONE)
-    
+
         #bus.add_signal_watch()
         #bus.connect('message', self.on_message)
         print "GO"
         state_ret = self.bin.set_state(gst.STATE_PLAYING);
-        print "STATE!", state_ret
+        # print "STATE!", state_ret
         #print "get_state", bin.get_state(gst.CLOCK_TIME_NONE)
-    
+
         if (state_ret == gst.STATE_CHANGE_ASYNC):
             state_ret = self.bin.get_state(gst.SECOND)
-            print "STATE2!", state_ret
+            # print "STATE2!", state_ret
 
         self.done = False
         bus = self.bin.get_bus()
@@ -63,7 +63,7 @@ class Ripper:
             state_ret = self.bin.get_state(gst.SECOND)
             #print "STATETICK", state_ret
             time = self.cdp.query_position(gst.FORMAT_TIME)
-            print "TIME", time
+            # print "TIME", time
         print "DUN"
 
 
@@ -96,4 +96,4 @@ class Ripper:
 #            callbackProgress(trackNo, secs, lensecs)
 #            lastsecs = secs
 
-    
+
