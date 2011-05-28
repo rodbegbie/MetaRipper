@@ -47,7 +47,7 @@ def _makeSafe(string):
     return retval
 
 def makePath(discmeta, overwrite=False, append=False):
-    fileroot = "/mnt/flac" #HACK: Shouldn't be hardcoded
+    fileroot = "/mnt/tera/flac" #HACK: Shouldn't be hardcoded
     path = os.path.join(fileroot, _makeSafe(discmeta.artistSort), _makeSafe(discmeta.title))
     if os.path.exists(path) and not overwrite:
         if not append:

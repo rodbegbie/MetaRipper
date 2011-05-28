@@ -10,8 +10,8 @@ from data.DiscMetadata import *
 from data.MusicBrainz import *
 from data.Amazon import getAmazonInfoByUPC
 from data.AudioScrobbler import getArtistTopTag
-from Util.RipTrack import ripTrack
-import logging, threading, webbrowser,urllib
+from Util.RipTrack import Ripper
+import threading, webbrowser,urllib
 from time import sleep, localtime
 
 
@@ -192,8 +192,7 @@ class wxMainFrame(wx.Frame):
         wx.CallAfter(self.gauge_disc.SetValue, discPercent)
 
     def _ripComplete(self, trackNo):
-        wx.CallAfter(self.grid_tracks.ClearSelection)
-        pass
+        pass#wx.CallAfter(self.grid_tracks.ClearSelection)
         
     def onMBDisc(self, event):
         url = "http://musicbrainz.org/album/%s.html" % self.discMeta.mbAlbumId
@@ -231,15 +230,29 @@ class wxMainFrame(wx.Frame):
             threading.Thread(None, self._ripThread).start()
         
     def _ripThread(self):
+        #r = None
+        r = Ripper()
+        r.setUpPipeline(self._device)
         for trackNum in range(1, len(self.discMeta.tracks) + 1):
-            wx.CallAfter(self.grid_tracks.SelectRow, trackNum-1)
+            #del(r)
+            #r = None
+            #wx.CallAfter(self.grid_tracks.SelectRow, trackNum-1)
             filename = makeTrackFilename(self._path, self.discMeta, trackNum)
             logging.info("Ripping to %s" % filename)
-            ripTrack(self._device, trackNum, filename, self._ripProgress, self._ripComplete)
-	    try:
+            self._done = False
+            r.ripTrack(trackNum, filename, self._ripProgress, self._ripComplete)
+
+            filename = makeTrackFilename(self._path, self.discMeta, trackNum)
+            try:
+                print "WRITING TAGS"
                 writeTags(filename, self.discMeta, trackNum)
-	    except:
-	        print "WRITING TAGS FAILED"
+            except:
+                try:
+                    print "TRYING TO WRITE TAGS AGAIN"
+                    writeTags(filename, self.discMeta, trackNum)
+                except:
+                    print "WRITING TAGS FAILED"
+
         # Dump XML
         xml = self.discMeta.dumps()
         f = open(os.path.join(self._path, "discmetadata.xml"), "w")

@@ -3,20 +3,21 @@ import urllib
 import ImageFile
 from data.DiscMetadata import DiscMetadata
 
-amazon.setLicenseKey("1AGTVVHBTYPBQKT7G482")
+amazon.setLicenseKey("1S0D2DDDPVCZJE26HCG2")
+amazon.setSecretKey("RSDWQPUbS4wsvMBU33BkElMsCvrEpjje2iChPj6r")
 
 def getAmazonInfoByUPC(barcode):
     if barcode:
-        try:
-            res = amazon.ItemLookup(ItemId=barcode, IdType="UPC", SearchIndex="Music", ResponseGroup="Medium")
-        except:
-            print "Amazon search failed"
-            return None
+        #try:
+        res = amazon.ItemLookup(ItemId=barcode, IdType="UPC", SearchIndex="Music", ResponseGroup="Medium")
+        #except:
+        #    print "Amazon search failed"
+        #    return None
             
         asin = res[0].ASIN
-        image = getBestImage([res[0].LargeImage.URL,
-                              res[0].MediumImage.URL,
-                              res[0].SmallImage.URL])
+        image = getBestImage([getattr(res[0], x).URL for x in ("LargeImage", "MediumImage", "SmallImage") if hasattr(res[0], x)]) #res[0].LargeImage.URL,
+#                              res[0].MediumImage.URL,
+#                              res[0].SmallImage.URL])
         
         return ("us", asin, image)
 
@@ -75,7 +76,7 @@ def getsizes(uri):
 if __name__ == "__main__":
     import os
     import gnosis.xml.pickle
-    for root, dirs, files in os.walk("/mnt/flac"):
+    for root, dirs, files in os.walk("/mnt/tera/flac"):
         discmetafile = os.path.join(root, "discmetadata.xml")
         coverjpg = os.path.join(root, "cover.jpg")
 

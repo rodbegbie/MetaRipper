@@ -1,0 +1,88 @@
+import pygst
+pygst.require('0.10')
+import gst
+from time import sleep
+
+cdp = None
+bin = None
+sink = None
+done = False
+cbC = None
+cbT = None
+
+def _nano2str(nanos):
+    ts = nanos / gst.SECOND
+    return '%02d:%02d:%02d.%02d' % (ts / 3600,
+                                    ts / 60,
+                                    ts % 60,
+                                    nanos % gst.SECOND)
+
+def setUpPipeline(device):
+    global cdp, sink, bin
+    cdp = gst.element_factory_make("cdparanoiasrc", "src")
+    cdp.set_property("device", device)
+    cdp.set_property("paranoia-mode", 4)
+
+    queue = gst.element_factory_make("queue", "queue")
+    queue.set_property("max-size-time", 120 * gst.SECOND)
+
+    flac = gst.element_factory_make("flacenc", "encoder")
+       
+    sink = gst.element_factory_make("filesink", "sink")
+
+    bin = gst.Pipeline()
+    bin.add(cdp, queue, flac, sink)
+    gst.element_link_many(cdp, queue, flac, sink)
+
+    bus = bin.get_bus()
+    bus.add_signal_watch()
+    bus.connect('message', on_message)
+    
+def ripTrack(trackNo, filename, callbackProgress, callbackComplete):
+    global cdp, sink, bin, cbC, done, tNo
+    print "RIP %s" % trackNo
+    cdp.set_state(gst.STATE_NULL);
+    cdp.set_property("track", trackNo)
+    sink.set_state(gst.STATE_NULL);
+    sink.set_property("location", filename)
+    cbC = callbackComplete
+    tNo = trackNo
+
+    #bin.set_state(gst.STATE_PAUSED)
+    #print "get_state", bin.get_state(gst.CLOCK_TIME_NONE)
+    
+    print "GO"
+    bin.set_state(gst.STATE_PLAYING);
+    #print "get_state", bin.get_state(gst.CLOCK_TIME_NONE)
+   
+
+    done = False
+    while (not done):
+        pass#sleep(0.5)
+    print "DUN"
+
+
+def on_message(bus, msg):
+    t = msg.type
+    print msg
+    if t == gst.MESSAGE_EOS:
+        print "STOP"
+	global done, cbC, tNo, sink, bin, cdp
+        #sink.set_state(gst.STATE_NULL);
+        #cdp.set_state(gst.STATE_NULL);
+        bin.set_state(gst.STATE_NULL);
+        cbC(tNo)
+	done = True
+        print "VERYEND"
+
+#    while bin.iterate():
+#        nanos = src_pad.query(gst.QUERY_POSITION, gst.FORMAT_TIME)
+#        length = src_pad.query(gst.QUERY_TOTAL, gst.FORMAT_TIME)
+#        secs = nanos / gst.SECOND
+#        lensecs = length / gst.SECOND
+#        if secs <> lastsecs and secs > 0:
+#            print "secs %d, lensecs %d" % (secs,lensecs)
+#            callbackProgress(trackNo, secs, lensecs)
+#            lastsecs = secs
+
+    

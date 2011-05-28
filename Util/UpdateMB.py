@@ -5,7 +5,7 @@ from Util import walk
 
 if __name__ == "__main__":
     import gnosis.xml.pickle    
-    for root, dirs, files in walk("/mnt/flac", followlinks=True):
+    for root, dirs, files in walk("/mnt/tera/flac/Supergrass",followlinks=True):
         discmetafile = os.path.join(root, "discmetadata.xml")
 
         if os.path.exists(discmetafile):
@@ -18,21 +18,31 @@ if __name__ == "__main__":
             
         print "\n\n======================================"
         print ("Checking %s - %s" % (discmeta.artist, discmeta.title)).encode("ascii", "ignore")
-        mb = searchMbByDiscId(discmeta.mbAlbumId)
+
+	try:
+	    mb = searchMbByDiscId(discmeta.mbAlbumId)
+	except:
+	    print "***** MB SEARCH FAILED *****"
+	    sys.stdout.flush()
+	    continue
         
         if not mb:
             print "***** DISC ID NO LONGER VALID FOR: '%s' *****" % discmeta.title
+	    sys.stdout.flush()
             continue
         
         (newDiscMeta, dirchange) = updateDiscMetadata(mb, discmeta)
         
         if not newDiscMeta:
             print "OK"
+	    justUpdateTags = True
+	    sys.stdout.flush()
             continue
         else:
-            print "ALBUM NEEDS UPDATERING!"
+            print "***** ALBUM NEEDS UPDATERING! *****"
+	    justUpdateTags = False
         
-        if dirchange:
+        if False: #!!!dirchange:
             newpath = makePath(newDiscMeta, False, True)
             coverjpg = os.path.join(root, 'cover.jpg')
             if os.path.exists(coverjpg):
@@ -56,6 +66,9 @@ if __name__ == "__main__":
                 mp3file = flacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
                 newflacfile = makeTrackFilename(newpath, discmeta, trackNum)
                 newmp3file = newflacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
+		if len(newmp3file) > 150:
+		    print "SHORTENING ", newmp3file
+		    newmp3file = newmp3file[:146] + ".mp3"
                     
                 if flacfile <> newflacfile:
                     print "Moving %s to %s" % (flacfile, newflacfile)
@@ -76,14 +89,16 @@ if __name__ == "__main__":
                         print "Moving MP3 file %s" % mp3file
                         os.renames(mp3file, newmp3file)
         
-	print "Saving new metadata file"
-        newdiscmetafile = makeMetadataFilename(newpath, "discmetadata.xml")
-        if os.path.exists(discmetafile+".bak"):
-            os.unlink(discmetafile+".bak")
-        os.renames(discmetafile, newdiscmetafile+".bak")
-        f = open(newdiscmetafile, "w")
-        xml = gnosis.xml.pickle.dumps(discmeta)
-        f.write(xml)
-        f.close()        
+	if not justUpdateTags:
+	    print "Saving new metadata file"
+            newdiscmetafile = makeMetadataFilename(newpath, "discmetadata.xml")
+            if os.path.exists(discmetafile+".bak"):
+                os.unlink(discmetafile+".bak")
+            os.renames(discmetafile, newdiscmetafile+".bak")
+            f = open(newdiscmetafile, "w")
+            xml = gnosis.xml.pickle.dumps(discmeta)
+            f.write(xml)
+            f.close()        
                 
+	sys.stdout.flush()
     print "**** ALL DONE! ****"

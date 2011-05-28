@@ -1,4 +1,4 @@
-import cElementTree as ET
+import xml.etree.cElementTree as ET
 import urllib
 from time import sleep
 from musicbrainz import MBI_VARIOUS_ARTIST_ID

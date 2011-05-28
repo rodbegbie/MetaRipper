@@ -1,3 +1,5 @@
+import pygst
+pygst.require('0.10')
 import gst
 import os,sys
 from eyeD3 import Tag, FrameHeader, TextFrame, UTF_8_ENCODING
@@ -13,33 +15,48 @@ def convert(flacfile, mp3file):
     print "Converting %s... " % flacfile
     src = gst.element_factory_make("filesrc", "src")
     src.set_property("location", flacfile)
-    src_pad = src.get_pad("src")
+    #src_pad = src.get_pad("src")
 
     flac = gst.element_factory_make("flacdec", "decoder")
        
     mp3 = gst.element_factory_make("lame", "encoder")
     mp3.set_property("bitrate", 192)
-    mp3.set_property("quality", 2)
+    #mp3.set_property("quality", 2)
+    #mp3.set_property("vbr", 4)
+    #mp3.set_property("vbr-quality", 2)
     
+    id3 = gst.element_factory_make("id3mux", "tagger")
+
+    #xing = gst.element_factory_make("xingmux", "vbrfixer")
+
     sink = gst.element_factory_make("filesink", "sink")
     sink.set_property("location", mp3file)
 
     bin = gst.Pipeline()
-    bin.add_many(src,flac,mp3,sink)
-    gst.element_link_many(src,flac,mp3,sink)
-    bin.connect("error", error_cb)
+    bin.add(src,flac,mp3,id3,sink)
+    gst.element_link_many(src,flac,mp3,id3,sink)
+    #bin.connect("error", error_cb)
     
-    bin.set_state(gst.STATE_PAUSED)
+    bin.set_state(gst.STATE_PLAYING)
     
-    res = bin.set_state(gst.STATE_PLAYING);
-    while bin.iterate():
-        pass
+    print "GO"
+    bus = bin.get_bus()
+    while 1:
+        msg = bus.poll(gst.MESSAGE_EOS | gst.MESSAGE_ERROR, gst.SECOND)
+        if msg:
+            print msg
+            print "DUN"
+            break
+
+    print "STOP"
+    bin.set_state(gst.STATE_NULL);
+ 
     print "Done.\n"
     
 if __name__ == "__main__":
     import gnosis.xml.pickle    
     tag = Tag()
-    root = "/mnt/flac/"
+    root = "/mnt/tera/flac/"
     if sys.argv:
     	root = sys.argv[1]
     for root, dirs, files in walk(root, followlinks=True):

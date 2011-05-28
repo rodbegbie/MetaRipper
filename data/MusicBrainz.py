@@ -10,6 +10,7 @@ DISC_NUM_REGEX = re.compile(r".*\s+\([Dd]isc (\d+)")
 
 def searchMbForDisc(device):
     mb = musicbrainz.mb()
+#    mb.SetServer("mbserver",80)
     mb.SetDepth(2)
     mb.SetDevice(device)
 
@@ -39,7 +40,8 @@ def searchMbForDisc(device):
     
 def searchMbByDiscId(discId):
     mb = musicbrainz.mb()
-    mb.SetServer("mbserver",80)
+#    mb.SetServer("brainzvm", 80)
+    mb.SetServer("musicbrainz.org",80)
     mb.SetDepth(4)
 
     logging.info("querying musicbrainz.org to see if this cd is on there...")
@@ -241,6 +243,7 @@ def updateDiscMetadata(mb, discMeta):
         return (None, False)
 
 def writeTags(filename, discMeta, trackNum):
+    print "FILENAME", filename
     tp.setMoveFiles(False)
     tp.setRenameFiles(False)
     tp.setWriteID3v1(True)
@@ -248,9 +251,10 @@ def writeTags(filename, discMeta, trackNum):
     tp.setID3Encoding(tunepimp.eUTF8)
     fileId = tp.addFile(filename)
     tr = tp.getTrack(fileId);
+    print "HASCHANGED1", tr.hasChanged()
     tr.lock()
     mdata = tr.getServerMetadata()
-    mdata.album = discMeta.title
+    mdata.album = discMeta.title.encode("utf-8")
     mdata.albumId = discMeta.mbAlbumId
     #mdata.albumArtistId = discMeta.mbArtistId
     mdata.variousArtist = (discMeta.mbArtistId == q.MBI_VARIOUS_ARTIST_ID)
@@ -258,18 +262,22 @@ def writeTags(filename, discMeta, trackNum):
         mdata.releaseYear = discMeta.releaseDate
    
     trackMeta = discMeta.tracks[trackNum-1]
-    mdata.artist = trackMeta.artist
+    mdata.artist = trackMeta.artist.encode("utf-8")
     if hasattr(trackMeta, "artistSort"):
-        mdata.sortName = trackMeta.artistSort
+        mdata.sortName = trackMeta.artistSort.encode("utf-8")
     mdata.artistId = trackMeta.mbArtistId
-    mdata.track = trackMeta.title
+    mdata.track = trackMeta.title.encode("utf-8")
     mdata.trackId = trackMeta.mbTrackId
     mdata.trackNum = trackMeta.number
+    print "HASCHANGED2", tr.hasChanged()
     tr.setStatus(tunepimp.eRecognized)
     tr.setServerMetadata(mdata)
     tr.unlock()                   
     tp.releaseTrack(tr);
+    print "HASCHANGED3", tr.hasChanged()
+    print "ERROR", tr.getTrackError()
     tp.writeTags([fileId],)
+    print "MDATA", mdata.album
     noti = tp.getNotification()
     from time import sleep
     i = 0
@@ -281,4 +289,6 @@ def writeTags(filename, discMeta, trackNum):
 	    print noti
     	sleep(0.1)
 	noti = tp.getNotification()
+        print "ERROR", tr.getTrackError()
+        print "HASCHANGED4", tr.hasChanged()
     
