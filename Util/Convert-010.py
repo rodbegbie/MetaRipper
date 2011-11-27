@@ -19,13 +19,13 @@ def convert(flacfile, mp3file):
     #src_pad = src.get_pad("src")
 
     flac = gst.element_factory_make("flacdec", "decoder")
-       
+
     mp3 = gst.element_factory_make("lame", "encoder")
     mp3.set_property("bitrate", 192)
     #mp3.set_property("quality", 2)
     #mp3.set_property("vbr", 4)
     #mp3.set_property("vbr-quality", 2)
-    
+
     id3 = gst.element_factory_make("id3v2mux", "tagger")
 
     #xing = gst.element_factory_make("xingmux", "vbrfixer")
@@ -37,9 +37,9 @@ def convert(flacfile, mp3file):
     bin.add(src,flac,mp3,id3,sink)
     gst.element_link_many(src,flac,mp3,id3,sink)
     #bin.connect("error", error_cb)
-    
+
     bin.set_state(gst.STATE_PLAYING)
-    
+
     print "GO"
     bus = bin.get_bus()
     while 1:
@@ -51,15 +51,15 @@ def convert(flacfile, mp3file):
 
     print "STOP"
     bin.set_state(gst.STATE_NULL);
- 
+
     print "Done.\n"
-    
+
 if __name__ == "__main__":
-    import gnosis.xml.pickle    
+    import gnosis.xml.pickle
     tag = Tag()
     root = "/mnt/tera/flac/"
     if sys.argv:
-    	root = sys.argv[1]
+        root = sys.argv[1]
     for root, dirs, files in walk(root, followlinks=True):
         mp3dir = root.replace("/flac/", "/mp3/")
         if not os.path.exists(mp3dir):
@@ -77,16 +77,16 @@ if __name__ == "__main__":
 
         print "\n---------------------"
         print ("%s - %s" % (discMeta.artist, discMeta.title)).encode("ascii", "ignore")
-        
+
         metaUpdateTime = os.path.getmtime(discmetafile)
-            
+
         coverfilename = os.path.join(root, "cover.jpg")
 
         cover = False
         if os.path.exists(coverfilename):
             cover = True
             coverUpdateTime = os.path.getmtime(coverfilename)
-        
+
         mp3CoverFilename = os.path.join(mp3dir, "cover.jpg")
         if cover and ((not os.path.exists(mp3CoverFilename)) \
                  or (os.path.getmtime(mp3CoverFilename) < coverUpdateTime)):
@@ -96,14 +96,11 @@ if __name__ == "__main__":
             cout.write(cin.read())
             cin.close()
             cout.close()
-            
+
         for file in files:
             if file.endswith(".flac"):
                 flacfile = os.path.join(root,file)
                 mp3file = flacfile.replace(".flac", ".mp3").replace("/flac/", "/mp3/")
-                if len(mp3file) > 150:
-                    print "SHORTENING ", mp3file
-                    mp3file = mp3file[:146] + ".mp3"
                 conv = True
                 if os.path.exists(mp3file):
                     print "%s already there" % mp3file
@@ -111,19 +108,19 @@ if __name__ == "__main__":
                 #        continue
                     #if os.path.getmtime(flacfile) <= os.path.getmtime(mp3file):
                     conv = False
-                
+
                 if conv:
                     convert(flacfile,mp3file)
 
                 tag.link(mp3file)
                 gotMB = False
                 trackNum = int(file[0:2])
-                
+
                 for frame in tag.frames:
                     if frame.header.id == 'UFID':
                         gotMB = True
                         break
-        
+
                 if not gotMB:
                     try:
                         print "Adding MB info to MP3 ID3 tags"
@@ -138,9 +135,10 @@ if __name__ == "__main__":
                 gotCover = False
                 gotTPOS = False
                 gotTYER = False
-		gotTPE2 = False
+                gotTPE2 = False
+                gotTSO2 = False
                 needsUpdate = False
-                
+
                 for frame in tag.frames:
                     if frame.header.id == 'APIC':
                         gotCover = True
@@ -148,13 +146,15 @@ if __name__ == "__main__":
                         gotTPOS = True
                     if frame.header.id == 'TPE2':
                         gotTPE2 = True
-                        
+                    if frame.header.id == 'TSO2':
+                        gotTSO2 = True
+
                 if cover and not gotCover:
                     tag.link(mp3file)
                     print "Adding cover to MP3 ID3 tags"
                     tag.addImage(3, coverfilename, u"cover")
                     needsUpdate = True
-                    
+
                 if not gotTPE2:
                     print "Updating TPE2 fields"
                     tpe2Header = FrameHeader(tag.header)
@@ -162,8 +162,8 @@ if __name__ == "__main__":
                     tpe2 = TextFrame(tpe2Header)
                     tpe2.text = discMeta.artist
                     tag.frames.append(tpe2)
-		    needsUpdate = True
-                    
+                    needsUpdate = True
+
                 if not gotTPOS:
                     print "Updating TPOS/TRCK fields"
                     tposHeader = FrameHeader(tag.header)
@@ -175,7 +175,19 @@ if __name__ == "__main__":
                     # Also update the TRCK to be in x/y format
                     tag.frames["TRCK"][0].text = "%d/%d" % (trackNum, len(discMeta.tracks))
                     needsUpdate = True
-                    
+
+                if not gotTSO2:
+                    try:
+                        print "Updating TSO2 fields"
+                        tpe2Header = FrameHeader(tag.header)
+                        tpe2Header.id = "TSO2"
+                        tpe2 = TextFrame(tpe2Header)
+                        tpe2.text = discMeta.artistSort
+                        tag.frames.append(tpe2)
+                        needsUpdate = True
+                    except:
+                        print "SOMETHING WENT BAD :("
+
                 if discMeta.releaseDate and not tag.getDate():
                     print "Setting release year"
                     tag.setDate(discMeta.releaseDate)
@@ -185,15 +197,15 @@ if __name__ == "__main__":
                     print "Setting genre"
                     tag.setGenre(discMeta.genre)
                     needsUpdate = True
-                        
+
                 if needsUpdate:
                     try:
-		    	tag.setTextEncoding(UTF_8_ENCODING)
+                        tag.setTextEncoding(UTF_8_ENCODING)
                         tag.update()
                     except:
                         print "FAILED first time -- trying again"
-			try:
+                        try:
                             sleep(1.0)
                             tag.update()
-			except:
-			    print "MEGA FAIL!"
+                        except:
+                            print "MEGA FAIL!"
