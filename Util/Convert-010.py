@@ -3,6 +3,7 @@ pygst.require('0.10')
 import gst
 import os,sys
 from eyeD3 import Tag, FrameHeader, TextFrame, UTF_8_ENCODING
+
 from data.MusicBrainz import *
 from Util import walk
 from time import sleep
@@ -25,7 +26,7 @@ def convert(flacfile, mp3file):
     #mp3.set_property("vbr", 4)
     #mp3.set_property("vbr-quality", 2)
     
-    id3 = gst.element_factory_make("id3mux", "tagger")
+    id3 = gst.element_factory_make("id3v2mux", "tagger")
 
     #xing = gst.element_factory_make("xingmux", "vbrfixer")
 

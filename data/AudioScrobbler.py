@@ -1,10 +1,10 @@
 import xml.etree.cElementTree as ET
 import urllib
 from time import sleep
-from musicbrainz import MBI_VARIOUS_ARTIST_ID
+#from musicbrainz import MBI_VARIOUS_ARTIST_ID
 
 def getArtistTopTag(artistName, mbArtistId):
-    if mbArtistId == MBI_VARIOUS_ARTIST_ID:
+    if mbArtistId == "89ad4ac3-39f7-470e-963a-56509c546377": #MBI_VARIOUS_ARTIST_ID:
         return None
     
     artistName = artistName.replace("&","and")

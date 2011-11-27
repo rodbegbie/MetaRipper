@@ -252,10 +252,10 @@ def writeTags(filename, discMeta, trackNum):
     from time import sleep
     i = 0
     while noti[1] <> 3:
+        print noti
     	i = i + 1
-	if i == 200:
-	    raise "Taking too long to save"
-	if noti[0] <> 0:
+	if i == 1000:
+	    raise Exception("Taking too long to save")
         sleep(0.1)
         noti = tp.getNotification()
 
