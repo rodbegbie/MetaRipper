@@ -54,10 +54,10 @@ def createDiscMetadata(release, cdid, numTracks, toc):
 
     album = release.title
     albid = extractUuid(release.id, 'release')
-    artId = extractUuid(release.artist.id, 'artist')
+    rel_artId = artId = extractUuid(release.artist.id, 'artist')
 
-    artist = release.artist.name
-    artistSort = release.artist.sortName
+    rel_artist = artist = release.artist.name
+    rel_artistSort = artistSort = release.artist.sortName
     discMeta.variousArtists = (release.artist.id == model.VARIOUS_ARTISTS_ID)
 
     releaseYear = None
@@ -92,9 +92,9 @@ def createDiscMetadata(release, cdid, numTracks, toc):
     for track in release.tracks:
         trackNum += 1
         name = track.title
-        artist = track.artist.name if track.artist else artist
-        artistSort = track.artist.sortName if track.artist else artistSort
-        artId = extractUuid(track.artist.id, 'artist') if track.artist else artId
+        artist = track.artist.name if track.artist else rel_artist
+        artistSort = track.artist.sortName if track.artist else rel_artistSort
+        artId = extractUuid(track.artist.id, 'artist') if track.artist else rel_artId
         dura = track.duration if track.duration else 0
         trackURI = track.id
         trackId = extractUuid(trackURI, 'track')
